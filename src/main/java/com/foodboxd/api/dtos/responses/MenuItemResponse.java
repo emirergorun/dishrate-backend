@@ -18,5 +18,7 @@ public class MenuItemResponse {
     private String photoUrl;
     private Long restaurantId;
     private String restaurantName;
+    private Double restaurantLatitude;
+    private Double restaurantLongitude;
     private CategoryResponse category;
 }

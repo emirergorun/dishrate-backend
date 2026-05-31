@@ -167,6 +167,8 @@ public class MenuItemService {
                 .photoUrl(menuItem.getPhotoUrl())
                 .restaurantId(menuItem.getRestaurant().getRestaurantId())
                 .restaurantName(menuItem.getRestaurant().getName())
+                .restaurantLatitude(menuItem.getRestaurant().getAddress().getLatitude())
+                .restaurantLongitude(menuItem.getRestaurant().getAddress().getLongitude())
                 .category(categoryResponse)
                 .build();
     }

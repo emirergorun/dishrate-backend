@@ -172,8 +172,13 @@ public class RatingService {
                 .username(rating.getUser().getUsername())
                 .menuItemId(rating.getMenuItem().getMenuItemId())
                 .menuItemName(rating.getMenuItem().getName())
+                .restaurantName(rating.getMenuItem().getRestaurant().getName())
+                .categoryName(rating.getMenuItem().getCategory() != null
+                        ? rating.getMenuItem().getCategory().getName()
+                        : null)
                 .score(rating.getScore())
                 .comment(rating.getComment())
+                .ratedAt(rating.getUpdatedAt())
                 .updatedAverageRating(updatedAverage)
                 .build();
     }
