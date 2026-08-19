@@ -1,6 +1,7 @@
 package com.foodboxd.api.services;
 
 import com.foodboxd.api.dtos.requests.CreateRatingRequest;
+import com.foodboxd.api.dtos.responses.MenuItemReviewResponse;
 import com.foodboxd.api.dtos.responses.RatingResponse;
 import com.foodboxd.api.entities.MenuItem;
 import com.foodboxd.api.entities.Rating;
@@ -32,6 +33,7 @@ public class RatingService {
     private final RatingRepository ratingRepository;
     private final UserRepository userRepository;
     private final MenuItemRepository menuItemRepository;
+    private final NotificationService notificationService;
 
     // -----------------------------------------------------------------------
     // UPSERT: Create or update a rating
@@ -82,6 +84,10 @@ public class RatingService {
         BigDecimal updatedAverage = recalculateAverage(menuItem);
         log.info("Updated average for menu item (ID: {}): {}", menuItem.getMenuItemId(), updatedAverage);
 
+        // Restoran sahiplerine bildirim (değerlendiren maskeli; owner kendini puanladıysa gitmez)
+        notificationService.notifyOwnersNewRating(
+                menuItem, user.getUserId(), maskName(user), savedRating.getScore());
+
         return toResponse(savedRating, updatedAverage);
     }
 
@@ -89,15 +95,57 @@ public class RatingService {
     // Get all ratings for a menu item
     // -----------------------------------------------------------------------
     @Transactional(readOnly = true)
-    public List<RatingResponse> getRatingsByMenuItem(Long menuItemId) {
+    public List<MenuItemReviewResponse> getRatingsByMenuItem(Long menuItemId, User viewer) {
         log.debug("Fetching ratings for menu item ID: {}", menuItemId);
         if (!menuItemRepository.existsById(menuItemId)) {
             throw new ResourceNotFoundException("Menu item not found. ID: " + menuItemId);
         }
+        Long viewerId = viewer != null ? viewer.getUserId() : null;
         return ratingRepository.findByMenuItem_MenuItemId(menuItemId)
                 .stream()
-                .map(r -> toResponse(r, null))
+                .map(r -> {
+                    boolean mine = viewerId != null
+                            && r.getUser().getUserId().equals(viewerId);
+                    return MenuItemReviewResponse.builder()
+                            .ratingId(r.getRatingId())
+                            // Kendi yorumu gerçek ad, başkasınınki maskeli
+                            .reviewerName(mine ? displayName(r.getUser()) : maskName(r.getUser()))
+                            .mine(mine)
+                            .score(r.getScore())
+                            .comment(r.getComment())
+                            .ratedAt(r.getUpdatedAt())
+                            .build();
+                })
                 .collect(Collectors.toList());
+    }
+
+    // İsim/soyisim varsa "Ad Soyad", yoksa kullanıcı adı.
+    private String displayName(User u) {
+        String first = u.getFirstName();
+        String last = u.getLastName();
+        if (first != null && !first.isBlank()) {
+            return last != null && !last.isBlank()
+                    ? first.trim() + " " + last.trim()
+                    : first.trim();
+        }
+        return u.getUsername();
+    }
+
+    // "Emir Ergörün" → "E*** E***", "emir_test" → "e***"
+    private String maskName(User u) {
+        String first = u.getFirstName();
+        String last = u.getLastName();
+        if (first != null && !first.isBlank()) {
+            String masked = maskWord(first);
+            if (last != null && !last.isBlank()) masked += " " + maskWord(last);
+            return masked;
+        }
+        return maskWord(u.getUsername());
+    }
+
+    private String maskWord(String s) {
+        String t = s == null ? "" : s.trim();
+        return t.isEmpty() ? "***" : t.charAt(0) + "***";
     }
 
     // -----------------------------------------------------------------------
@@ -172,6 +220,7 @@ public class RatingService {
                 .username(rating.getUser().getUsername())
                 .menuItemId(rating.getMenuItem().getMenuItemId())
                 .menuItemName(rating.getMenuItem().getName())
+                .photoUrl(rating.getMenuItem().getPhotoUrl())
                 .restaurantName(rating.getMenuItem().getRestaurant().getName())
                 .categoryName(rating.getMenuItem().getCategory() != null
                         ? rating.getMenuItem().getCategory().getName()

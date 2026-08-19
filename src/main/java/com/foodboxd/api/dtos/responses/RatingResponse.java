@@ -17,6 +17,7 @@ public class RatingResponse {
     private String username;
     private Long menuItemId;
     private String menuItemName;
+    private String photoUrl;
     private String restaurantName;
     private String categoryName;
     private BigDecimal score;

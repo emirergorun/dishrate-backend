@@ -39,3 +39,6 @@ Thumbs.db
 # Environment
 .env
 .env.local
+
+# Yüklenen görseller (yerel geliştirme deposu)
+uploads/

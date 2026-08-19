@@ -14,6 +14,14 @@ public class CreateUserRequest {
     @Size(min = 3, max = 50, message = "Kullanıcı adı 3 ile 50 karakter arasında olmalıdır")
     private String username;
 
+    @NotBlank(message = "İsim boş bırakılamaz")
+    @Size(max = 50, message = "İsim en fazla 50 karakter olabilir")
+    private String firstName;
+
+    @NotBlank(message = "Soyisim boş bırakılamaz")
+    @Size(max = 50, message = "Soyisim en fazla 50 karakter olabilir")
+    private String lastName;
+
     @NotBlank(message = "E-posta adresi boş bırakılamaz")
     @Email(message = "Geçerli bir e-posta adresi giriniz")
     @Size(max = 150, message = "E-posta adresi en fazla 150 karakter olabilir")

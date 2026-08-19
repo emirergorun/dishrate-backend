@@ -1,4 +1,15 @@
 # ============================================================
+# ÖRNEK YAPILANDIRMA
+# ------------------------------------------------------------
+# Bu dosyayı `application.properties` olarak kopyalayın ve
+# YOUR_* ile başlayan değerleri kendi bilgilerinizle doldurun:
+#
+#   cp application.properties.example application.properties
+#
+# `application.properties` .gitignore'dadır — asla commit etmeyin.
+# ============================================================
+
+# ============================================================
 # SERVER
 # ============================================================
 server.port=8080
@@ -19,6 +30,46 @@ spring.jpa.hibernate.ddl-auto=update
 spring.jpa.show-sql=true
 spring.jpa.properties.hibernate.format_sql=true
 spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+
+# ============================================================
+# JACKSON
+# ============================================================
+spring.jackson.serialization.write-dates-as-timestamps=false
+
+# ============================================================
+# JWT
+# ============================================================
+# HS512 için en az 512 bit (64 karakter) rastgele bir değer üretin, örn:
+#   openssl rand -base64 64
+# Üretimde environment variable olarak verin, dosyaya yazmayın.
+jwt.secret=YOUR_JWT_SECRET_AT_LEAST_64_CHARS
+jwt.access-token-expiration-ms=3600000
+jwt.refresh-token-expiration-days=60
+
+# ============================================================
+# ADMIN SEED
+# ============================================================
+# Uygulama ilk açılışta bu e-posta ile admin yoksa oluşturur.
+# Üretimde mutlaka güçlü bir şifre kullanın.
+admin.seed.username=admin
+admin.seed.email=YOUR_ADMIN_EMAIL
+admin.seed.password=YOUR_ADMIN_PASSWORD
+
+# ============================================================
+# DOSYA YÜKLEME (görseller)
+# ============================================================
+# Yüklenen görsellerin kaydedileceği klasör (proje köküne göre).
+# Üretimde S3/Cloudinary gibi bir bulut depolamaya taşınmalı.
+app.upload.dir=uploads
+spring.servlet.multipart.max-file-size=5MB
+spring.servlet.multipart.max-request-size=6MB
+
+# ============================================================
+# ÖRNEK (DEMO) VERİ TOHUMLAMA
+# ============================================================
+# true  → veritabanı boşsa 23 örnek restoran + 92 menü öğesi eklenir
+# false → hiç örnek veri eklenmez (ÜRETİMDE false OLMALI)
+app.seed.data=true
 
 # ============================================================
 # LOGGING

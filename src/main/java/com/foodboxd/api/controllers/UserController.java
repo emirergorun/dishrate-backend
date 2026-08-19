@@ -1,12 +1,11 @@
 package com.foodboxd.api.controllers;
 
-import com.foodboxd.api.dtos.requests.CreateUserRequest;
+import com.foodboxd.api.dtos.requests.ChangePasswordRequest;
 import com.foodboxd.api.dtos.requests.UpdateUserRequest;
 import com.foodboxd.api.dtos.responses.UserResponse;
 import com.foodboxd.api.services.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,15 +18,7 @@ public class UserController {
 
     private final UserService userService;
 
-    /**
-     * POST /api/v1/users/register
-     * Registers a new user account.
-     */
-    @PostMapping("/register")
-    public ResponseEntity<UserResponse> registerUser(@Valid @RequestBody CreateUserRequest request) {
-        UserResponse response = userService.createUser(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
+    // NOT: Kayıt işlemi /auth/register endpoint'inden yapılır.
 
     /**
      * GET /api/v1/users/{userId}
@@ -56,6 +47,18 @@ public class UserController {
             @PathVariable Long userId,
             @Valid @RequestBody UpdateUserRequest request) {
         return ResponseEntity.ok(userService.updateUser(userId, request));
+    }
+
+    /**
+     * PATCH /api/v1/users/{userId}/password
+     * Changes the user's password (requires current password).
+     */
+    @PatchMapping("/{userId}/password")
+    public ResponseEntity<Void> changePassword(
+            @PathVariable Long userId,
+            @Valid @RequestBody ChangePasswordRequest request) {
+        userService.changePassword(userId, request.getCurrentPassword(), request.getNewPassword());
+        return ResponseEntity.noContent().build();
     }
 
     /**

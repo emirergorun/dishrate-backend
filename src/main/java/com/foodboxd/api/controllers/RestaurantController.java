@@ -2,10 +2,12 @@ package com.foodboxd.api.controllers;
 
 import com.foodboxd.api.dtos.requests.CreateAddressRequest;
 import com.foodboxd.api.dtos.requests.CreateRestaurantRequest;
+import com.foodboxd.api.dtos.requests.UpdateRestaurantRequest;
 import com.foodboxd.api.dtos.responses.AddressResponse;
 import com.foodboxd.api.dtos.responses.MenuItemResponse;
 import com.foodboxd.api.dtos.responses.RestaurantResponse;
 import com.foodboxd.api.entities.Address;
+import com.foodboxd.api.entities.User;
 import com.foodboxd.api.exceptions.ResourceNotFoundException;
 import com.foodboxd.api.repositories.AddressRepository;
 import com.foodboxd.api.services.MenuItemService;
@@ -14,6 +16,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -66,6 +69,16 @@ public class RestaurantController {
     }
 
     /**
+     * GET /api/v1/restaurants/mine
+     * Giriş yapmış kullanıcının sahip olduğu restoranlar (owner dashboard).
+     */
+    @GetMapping("/mine")
+    public ResponseEntity<List<RestaurantResponse>> myRestaurants(
+            @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(restaurantService.getMyRestaurants(currentUser));
+    }
+
+    /**
      * GET /api/v1/restaurants/{restaurantId}
      * Returns restaurant details by ID.
      */
@@ -102,12 +115,27 @@ public class RestaurantController {
     }
 
     /**
+     * PATCH /api/v1/restaurants/{restaurantId}
+     * Updates restaurant info (owner/admin only).
+     */
+    @PatchMapping("/{restaurantId}")
+    public ResponseEntity<RestaurantResponse> updateRestaurant(
+            @PathVariable Long restaurantId,
+            @AuthenticationPrincipal User currentUser,
+            @Valid @RequestBody UpdateRestaurantRequest request) {
+        return ResponseEntity.ok(
+                restaurantService.updateRestaurant(restaurantId, request, currentUser));
+    }
+
+    /**
      * DELETE /api/v1/restaurants/{restaurantId}
-     * Deletes a restaurant.
+     * Deletes a restaurant (owner/admin only).
      */
     @DeleteMapping("/{restaurantId}")
-    public ResponseEntity<Void> deleteRestaurant(@PathVariable Long restaurantId) {
-        restaurantService.deleteRestaurant(restaurantId);
+    public ResponseEntity<Void> deleteRestaurant(
+            @PathVariable Long restaurantId,
+            @AuthenticationPrincipal User currentUser) {
+        restaurantService.deleteRestaurant(restaurantId, currentUser);
         return ResponseEntity.noContent().build();
     }
 }

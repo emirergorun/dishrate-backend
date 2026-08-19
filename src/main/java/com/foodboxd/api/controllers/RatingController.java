@@ -1,12 +1,15 @@
 package com.foodboxd.api.controllers;
 
 import com.foodboxd.api.dtos.requests.CreateRatingRequest;
+import com.foodboxd.api.dtos.responses.MenuItemReviewResponse;
 import com.foodboxd.api.dtos.responses.RatingResponse;
+import com.foodboxd.api.entities.User;
 import com.foodboxd.api.services.RatingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -35,8 +38,10 @@ public class RatingController {
      * Returns all ratings for a given menu item.
      */
     @GetMapping("/menu-item/{menuItemId}")
-    public ResponseEntity<List<RatingResponse>> getRatingsByMenuItem(@PathVariable Long menuItemId) {
-        return ResponseEntity.ok(ratingService.getRatingsByMenuItem(menuItemId));
+    public ResponseEntity<List<MenuItemReviewResponse>> getRatingsByMenuItem(
+            @PathVariable Long menuItemId,
+            @AuthenticationPrincipal User viewer) {
+        return ResponseEntity.ok(ratingService.getRatingsByMenuItem(menuItemId, viewer));
     }
 
     /**

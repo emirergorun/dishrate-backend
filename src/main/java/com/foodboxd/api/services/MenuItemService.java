@@ -2,18 +2,23 @@ package com.foodboxd.api.services;
 
 import com.foodboxd.api.dtos.requests.CreateCategoryRequest;
 import com.foodboxd.api.dtos.requests.CreateMenuItemRequest;
+import com.foodboxd.api.dtos.requests.UpdateMenuItemRequest;
 import com.foodboxd.api.dtos.responses.CategoryResponse;
 import com.foodboxd.api.dtos.responses.MenuItemResponse;
 import com.foodboxd.api.entities.Category;
 import com.foodboxd.api.entities.MenuItem;
 import com.foodboxd.api.entities.Restaurant;
+import com.foodboxd.api.entities.User;
+import com.foodboxd.api.entities.UserRole;
 import com.foodboxd.api.exceptions.ResourceAlreadyExistsException;
 import com.foodboxd.api.exceptions.ResourceNotFoundException;
 import com.foodboxd.api.repositories.CategoryRepository;
 import com.foodboxd.api.repositories.MenuItemRepository;
+import com.foodboxd.api.repositories.RestaurantOwnerRepository;
 import com.foodboxd.api.repositories.RestaurantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +33,7 @@ public class MenuItemService {
     private final MenuItemRepository menuItemRepository;
     private final RestaurantRepository restaurantRepository;
     private final CategoryRepository categoryRepository;
+    private final RestaurantOwnerRepository restaurantOwnerRepository;
 
     // -----------------------------------------------------------------------
     // Create a category
@@ -53,7 +59,7 @@ public class MenuItemService {
     // Create a menu item
     // -----------------------------------------------------------------------
     @Transactional
-    public MenuItemResponse createMenuItem(CreateMenuItemRequest request) {
+    public MenuItemResponse createMenuItem(CreateMenuItemRequest request, User currentUser) {
         log.info("Create menu item request. Restaurant ID: {}, Name: {}",
                 request.getRestaurantId(), request.getName());
 
@@ -61,6 +67,7 @@ public class MenuItemService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Restaurant not found. ID: " + request.getRestaurantId()
                 ));
+        assertCanManage(currentUser, restaurant.getRestaurantId());
 
         if (menuItemRepository.existsByRestaurant_RestaurantIdAndName(
                 request.getRestaurantId(), request.getName())) {
@@ -124,6 +131,24 @@ public class MenuItemService {
     // Search menu items by name
     // -----------------------------------------------------------------------
     @Transactional(readOnly = true)
+    public List<MenuItemResponse> getAllMenuItems() {
+        log.debug("Fetching all menu items.");
+        return menuItemRepository.findAll()
+                .stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<MenuItemResponse> getByCategory(String categoryName) {
+        log.debug("Fetching menu items by category: {}", categoryName);
+        return menuItemRepository.findByCategory_NameIgnoreCase(categoryName)
+                .stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
     public List<MenuItemResponse> searchByName(String name) {
         log.debug("Searching menu items by name: {}", name);
         return menuItemRepository.findByNameContainingIgnoreCase(name)
@@ -133,18 +158,77 @@ public class MenuItemService {
     }
 
     // -----------------------------------------------------------------------
-    // Delete a menu item
+    // Update a menu item (owner/admin only)
     // -----------------------------------------------------------------------
     @Transactional
-    public void deleteMenuItem(Long menuItemId) {
-        log.info("Delete menu item request. ID: {}", menuItemId);
-        if (!menuItemRepository.existsById(menuItemId)) {
-            throw new ResourceNotFoundException(
-                    "Menu item not found for deletion. ID: " + menuItemId
-            );
+    public MenuItemResponse updateMenuItem(Long menuItemId,
+                                           UpdateMenuItemRequest request,
+                                           User currentUser) {
+        MenuItem menuItem = menuItemRepository.findById(menuItemId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Menu item not found. ID: " + menuItemId));
+        assertCanManage(currentUser, menuItem.getRestaurant().getRestaurantId());
+
+        if (request.getName() != null && !request.getName().isBlank()) {
+            menuItem.setName(request.getName().trim());
         }
-        menuItemRepository.deleteById(menuItemId);
+        if (request.getPrice() != null) {
+            menuItem.setPrice(request.getPrice());
+        }
+        if (request.getPhotoUrl() != null) {
+            menuItem.setPhotoUrl(request.getPhotoUrl());
+        }
+        if (request.getCategoryId() != null) {
+            Category category = categoryRepository.findById(request.getCategoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Category not found. ID: " + request.getCategoryId()));
+            menuItem.setCategory(category);
+        }
+
+        MenuItem saved = menuItemRepository.save(menuItem);
+        log.info("Menu item updated. ID: {}", menuItemId);
+        return toResponse(saved);
+    }
+
+    // -----------------------------------------------------------------------
+    // List all categories (dropdown için)
+    // -----------------------------------------------------------------------
+    @Transactional(readOnly = true)
+    public List<CategoryResponse> getAllCategories() {
+        return categoryRepository.findAll()
+                .stream()
+                .map(c -> CategoryResponse.builder()
+                        .categoryId(c.getCategoryId())
+                        .name(c.getName())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    // -----------------------------------------------------------------------
+    // Delete a menu item (owner/admin only)
+    // -----------------------------------------------------------------------
+    @Transactional
+    public void deleteMenuItem(Long menuItemId, User currentUser) {
+        log.info("Delete menu item request. ID: {}", menuItemId);
+        MenuItem menuItem = menuItemRepository.findById(menuItemId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Menu item not found for deletion. ID: " + menuItemId));
+        assertCanManage(currentUser, menuItem.getRestaurant().getRestaurantId());
+        menuItemRepository.delete(menuItem);
         log.info("Menu item deleted successfully. ID: {}", menuItemId);
+    }
+
+    // -----------------------------------------------------------------------
+    // Yetki: kullanıcı bu restoranın sahibi mi (ya da admin mi)?
+    // -----------------------------------------------------------------------
+    private void assertCanManage(User user, Long restaurantId) {
+        if (user.getRole() == UserRole.ADMIN) return;
+        boolean owns = restaurantOwnerRepository
+                .findByRestaurantRestaurantIdAndUserUserId(restaurantId, user.getUserId())
+                .isPresent();
+        if (!owns) {
+            throw new AccessDeniedException("Bu restoran üzerinde yetkiniz yok.");
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -167,6 +251,8 @@ public class MenuItemService {
                 .photoUrl(menuItem.getPhotoUrl())
                 .restaurantId(menuItem.getRestaurant().getRestaurantId())
                 .restaurantName(menuItem.getRestaurant().getName())
+                .city(menuItem.getRestaurant().getAddress().getCity())
+                .district(menuItem.getRestaurant().getAddress().getDistrict())
                 .restaurantLatitude(menuItem.getRestaurant().getAddress().getLatitude())
                 .restaurantLongitude(menuItem.getRestaurant().getAddress().getLongitude())
                 .category(categoryResponse)
