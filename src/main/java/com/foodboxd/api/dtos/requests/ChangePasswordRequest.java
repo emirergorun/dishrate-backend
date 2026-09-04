@@ -1,5 +1,6 @@
 package com.foodboxd.api.dtos.requests;
 
+import com.foodboxd.api.validation.StrongPassword;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
@@ -13,6 +14,7 @@ public class ChangePasswordRequest {
     private String currentPassword;
 
     @NotBlank(message = "Yeni şifre boş bırakılamaz")
-    @Size(min = 6, max = 100, message = "Yeni şifre 6 ile 100 karakter arasında olmalıdır")
+    @Size(max = 100, message = "Yeni şifre en fazla 100 karakter olabilir")
+    @StrongPassword
     private String newPassword;
 }

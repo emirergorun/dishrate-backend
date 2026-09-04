@@ -71,11 +71,18 @@ public class AdminService {
 
         } else {
             // ── YENİ RESTORAN BAŞVURUSU: restoran oluştur ────────────────────
+            // Başvurudaki açık adres bileşenleri restoranın adresine taşınır
             Address address = addressRepository.save(
                     Address.builder()
                             .city(application.getCity())
                             .district(application.getDistrict())
+                            .addressLine1(application.getAddressLine1())
+                            .addressLine2(application.getAddressLine2())
+                            .buildingNo(application.getBuildingNo())
+                            .floorApartment(application.getFloorApartment())
+                            .postalCode(application.getPostalCode())
                             .fullAddress(application.getFullAddress() != null
+                                    && !application.getFullAddress().isBlank()
                                     ? application.getFullAddress()
                                     : application.getRestaurantName() + ", " + application.getCity())
                             .build()

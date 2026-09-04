@@ -42,8 +42,10 @@ public class AuthService {
     // -----------------------------------------------------------------------
     @Transactional
     public AuthResponse login(LoginRequest request) {
-        // 'email' alanı artık e-posta VEYA kullanıcı adı olabilir (identifier).
-        String identifier = request.getEmail();
+        // 'email' alanı e-posta VEYA kullanıcı adı olabilir (identifier).
+        // Kayıtta küçük harfle saklandığı için burada da normalize edilir —
+        // "Emir@Dishrate.com" ile "emir@dishrate.com" aynı hesaba gider.
+        String identifier = UserService.normalize(request.getEmail());
         log.info("Login attempt for identifier: {}", identifier);
 
         User user = userRepository.findByEmail(identifier)

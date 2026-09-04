@@ -36,24 +36,29 @@ public class UserService {
     // -----------------------------------------------------------------------
     @Transactional
     public UserResponse createUser(CreateUserRequest request) {
-        log.info("Create user request received. Username: {}", request.getUsername());
+        // Kullanıcı adı ve e-posta normalize edilir (kırp + küçük harf).
+        // Böylece "Emir_Test" ile "emir_test" AYNI hesap sayılır — hem giriş
+        // kolaylaşır hem de benzer isimle taklit hesap açılması engellenir.
+        final String username = normalize(request.getUsername());
+        final String email = normalize(request.getEmail());
+        log.info("Create user request received. Username: {}", username);
 
-        if (userRepository.existsByUsername(request.getUsername())) {
+        if (userRepository.existsByUsername(username)) {
             throw new ResourceAlreadyExistsException(
-                    "Username already taken: " + request.getUsername()
+                    "Username already taken: " + username
             );
         }
-        if (userRepository.existsByEmail(request.getEmail())) {
+        if (userRepository.existsByEmail(email)) {
             throw new ResourceAlreadyExistsException(
-                    "Email already registered: " + request.getEmail()
+                    "Email already registered: " + email
             );
         }
 
         User user = User.builder()
-                .username(request.getUsername())
-                .firstName(request.getFirstName())
-                .lastName(request.getLastName())
-                .email(request.getEmail())
+                .username(username)
+                .firstName(trimOrNull(request.getFirstName()))
+                .lastName(trimOrNull(request.getLastName()))
+                .email(email)
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .profilePhotoUrl(request.getProfilePhotoUrl())
                 .bio(request.getBio())
@@ -62,6 +67,17 @@ public class UserService {
         User saved = userRepository.save(user);
         log.info("User created successfully. ID: {}", saved.getUserId());
         return toResponse(saved);
+    }
+
+    /** Kırpar ve küçük harfe çevirir — kullanıcı adı/e-posta için. */
+    public static String normalize(String value) {
+        return value == null ? null : value.trim().toLowerCase(java.util.Locale.ROOT);
+    }
+
+    private static String trimOrNull(String value) {
+        if (value == null) return null;
+        final String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     // -----------------------------------------------------------------------
@@ -101,13 +117,15 @@ public class UserService {
                 ));
 
         // Kullanıcı adı — benzersiz olmalı
-        if (request.getUsername() != null
-                && !request.getUsername().equals(user.getUsername())) {
-            if (userRepository.existsByUsername(request.getUsername())) {
-                throw new ResourceAlreadyExistsException(
-                        "Username already taken: " + request.getUsername());
+        if (request.getUsername() != null) {
+            final String newUsername = normalize(request.getUsername());
+            if (!newUsername.equals(user.getUsername())) {
+                if (userRepository.existsByUsername(newUsername)) {
+                    throw new ResourceAlreadyExistsException(
+                            "Username already taken: " + newUsername);
+                }
+                user.setUsername(newUsername);
             }
-            user.setUsername(request.getUsername());
         }
 
         // İsim / soyisim — 15 günde bir kez değiştirilebilir

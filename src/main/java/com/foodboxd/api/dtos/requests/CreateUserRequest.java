@@ -1,7 +1,9 @@
 package com.foodboxd.api.dtos.requests;
 
 import jakarta.validation.constraints.Email;
+import com.foodboxd.api.validation.StrongPassword;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
@@ -12,6 +14,10 @@ public class CreateUserRequest {
 
     @NotBlank(message = "Kullanıcı adı boş bırakılamaz")
     @Size(min = 3, max = 50, message = "Kullanıcı adı 3 ile 50 karakter arasında olmalıdır")
+    @Pattern(
+            regexp = "^\\s*[A-Za-z0-9._-]+\\s*$",
+            message = "Kullanıcı adı boşluk içeremez; yalnızca harf, rakam, nokta, alt çizgi ve tire kullanılabilir"
+    )
     private String username;
 
     @NotBlank(message = "İsim boş bırakılamaz")
@@ -28,7 +34,8 @@ public class CreateUserRequest {
     private String email;
 
     @NotBlank(message = "Şifre boş bırakılamaz")
-    @Size(min = 6, max = 100, message = "Şifre 6 ile 100 karakter arasında olmalıdır")
+    @Size(max = 100, message = "Şifre en fazla 100 karakter olabilir")
+    @StrongPassword
     private String password;
 
     private String profilePhotoUrl;

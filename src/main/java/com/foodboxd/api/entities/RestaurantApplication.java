@@ -33,6 +33,22 @@ public class RestaurantApplication {
     @Column(name = "district", length = 100)
     private String district;
 
+    // ── Açık adres bileşenleri ────────────────────────────────────────────────
+    @Column(name = "address_line1", length = 255)
+    private String addressLine1;
+
+    @Column(name = "address_line2", length = 255)
+    private String addressLine2;
+
+    @Column(name = "building_no", length = 20)
+    private String buildingNo;
+
+    @Column(name = "floor_apartment", length = 30)
+    private String floorApartment;
+
+    @Column(name = "postal_code", length = 10)
+    private String postalCode;
+
     @Column(name = "full_address", columnDefinition = "TEXT")
     private String fullAddress;
 

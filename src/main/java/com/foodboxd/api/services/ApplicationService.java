@@ -6,6 +6,7 @@ import com.foodboxd.api.entities.ApplicationStatus;
 import com.foodboxd.api.entities.RestaurantApplication;
 import com.foodboxd.api.entities.User;
 import com.foodboxd.api.repositories.RestaurantApplicationRepository;
+import com.foodboxd.api.utils.AddressFormatter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -40,12 +41,27 @@ public class ApplicationService {
             throw new IllegalStateException("Zaten bekleyen bir başvurunuz var");
         }
 
+        // Açık adres parçalardan üretilir (istemciden gelen fullAddress'e güvenilmez)
+        final String fullAddress = AddressFormatter.compose(
+                request.getAddressLine1(),
+                request.getAddressLine2(),
+                request.getBuildingNo(),
+                request.getFloorApartment(),
+                request.getPostalCode(),
+                request.getDistrict(),
+                request.getCity());
+
         RestaurantApplication application = RestaurantApplication.builder()
                 .applicant(applicant)
                 .restaurantName(request.getRestaurantName())
                 .city(request.getCity())
                 .district(request.getDistrict())
-                .fullAddress(request.getFullAddress())
+                .addressLine1(request.getAddressLine1())
+                .addressLine2(request.getAddressLine2())
+                .buildingNo(request.getBuildingNo())
+                .floorApartment(request.getFloorApartment())
+                .postalCode(request.getPostalCode())
+                .fullAddress(fullAddress)
                 .contactPhone(request.getContactPhone())
                 .description(request.getDescription())
                 .build();

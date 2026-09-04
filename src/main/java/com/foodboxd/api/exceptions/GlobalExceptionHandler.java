@@ -6,7 +6,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -46,6 +48,38 @@ public class GlobalExceptionHandler {
                 ex.getMessage()
         );
         return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    }
+
+    // -----------------------------------------------------------------------
+    // Okunamayan / bozuk istek gövdesi (400)
+    // Örn: geçersiz JSON, boş gövde, alan tipi uyuşmazlığı.
+    // Bunlar istemci hatasıdır; 500 dönmek yanıltıcı olur.
+    // -----------------------------------------------------------------------
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleUnreadableBody(HttpMessageNotReadableException ex) {
+        log.warn("Malformed request body: {}", ex.getMessage());
+        ErrorResponse errorResponse = new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                "Malformed Request Body",
+                "İstek gövdesi okunamadı. Geçerli bir JSON gönderdiğinizden ve "
+                        + "'Content-Type: application/json' başlığını eklediğinizden emin olun."
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    // -----------------------------------------------------------------------
+    // Desteklenmeyen içerik tipi (415)
+    // Örn: Content-Type başlığı eksik veya JSON değil.
+    // -----------------------------------------------------------------------
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleUnsupportedMediaType(HttpMediaTypeNotSupportedException ex) {
+        log.warn("Unsupported media type: {}", ex.getMessage());
+        ErrorResponse errorResponse = new ErrorResponse(
+                HttpStatus.UNSUPPORTED_MEDIA_TYPE.value(),
+                "Unsupported Media Type",
+                "Desteklenmeyen içerik tipi. 'Content-Type: application/json' başlığını ekleyin."
+        );
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(errorResponse);
     }
 
     // -----------------------------------------------------------------------
