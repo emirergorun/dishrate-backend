@@ -1,10 +1,12 @@
 package com.foodboxd.api.controllers;
 
-import com.foodboxd.api.dtos.requests.RejectApplicationRequest;
-import com.foodboxd.api.dtos.responses.RestaurantApplicationResponse;
+import com.foodboxd.api.dtos.requests.ReviewClaimRequest;
+import com.foodboxd.api.dtos.responses.RestaurantClaimResponse;
 import com.foodboxd.api.dtos.responses.UserResponse;
 import com.foodboxd.api.entities.UserRole;
 import com.foodboxd.api.services.AdminService;
+import com.foodboxd.api.services.ClaimService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,32 +19,32 @@ import java.util.List;
 public class AdminController {
 
     private final AdminService adminService;
+    private final ClaimService claimService;
 
-    // ── Restoran Başvuruları ──────────────────────────────────────────────────
+    // ── Sahiplik Talepleri ────────────────────────────────────────────────────
 
-    /** Tüm başvurular (durum filtresi opsiyonel: PENDING, APPROVED, REJECTED) */
-    @GetMapping("/applications")
-    public ResponseEntity<List<RestaurantApplicationResponse>> getApplications(
-            @RequestParam(required = false, defaultValue = "false") boolean pendingOnly) {
-        var result = pendingOnly
-                ? adminService.getPendingApplications()
-                : adminService.getAllApplications();
-        return ResponseEntity.ok(result);
+    /**
+     * GET /api/v1/admin/claims
+     * Sahiplik talepleri. Varsayılan olarak yalnızca bekleyenler döner;
+     * geçmişi görmek için ?pendingOnly=false.
+     */
+    @GetMapping("/claims")
+    public ResponseEntity<List<RestaurantClaimResponse>> getClaims(
+            @RequestParam(required = false, defaultValue = "true") boolean pendingOnly) {
+        return ResponseEntity.ok(claimService.list(pendingOnly));
     }
 
-    /** Başvuruyu onayla → restoran oluştur, kullanıcıyı RESTAURANT_OWNER yap */
-    @PostMapping("/applications/{id}/approve")
-    public ResponseEntity<RestaurantApplicationResponse> approve(@PathVariable Long id) {
-        return ResponseEntity.ok(adminService.approveApplication(id));
-    }
-
-    /** Başvuruyu reddet */
-    @PostMapping("/applications/{id}/reject")
-    public ResponseEntity<RestaurantApplicationResponse> reject(
+    /**
+     * PATCH /api/v1/admin/claims/{id}
+     * Talebi sonuçlandırır: {"status": "APPROVED"} veya
+     * {"status": "REJECTED", "adminNote": "..."}.
+     */
+    @PatchMapping("/claims/{id}")
+    public ResponseEntity<RestaurantClaimResponse> reviewClaim(
             @PathVariable Long id,
-            @RequestBody(required = false) RejectApplicationRequest request) {
-        String note = request != null ? request.getAdminNote() : null;
-        return ResponseEntity.ok(adminService.rejectApplication(id, note));
+            @Valid @RequestBody ReviewClaimRequest request) {
+        return ResponseEntity.ok(
+                claimService.review(id, request.getStatus(), request.getAdminNote()));
     }
 
     // ── Kullanıcı Yönetimi ────────────────────────────────────────────────────

@@ -12,4 +12,7 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, Long> {
     List<Restaurant> findByNameContainingIgnoreCase(String name);
 
     List<Restaurant> findByAddress_City(String city);
+
+    /** Bir kullanıcının sahibi olduğu restoranlar (owner paneli). */
+    List<Restaurant> findByOwnerUserId(Long userId);
 }

@@ -23,6 +23,9 @@ public class Address {
     @Column(name = "district", length = 100)
     private String district;
 
+    @Column(name = "neighbourhood", length = 120)
+    private String neighbourhood;
+
     // ── Açık adres bileşenleri ────────────────────────────────────────────────
     @Column(name = "address_line1", length = 255)
     private String addressLine1;

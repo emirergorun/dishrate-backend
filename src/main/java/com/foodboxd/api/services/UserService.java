@@ -156,8 +156,17 @@ public class UserService {
         if (request.getBio() != null) {
             user.setBio(request.getBio());
         }
+        // Fotoğraf kaldırıldığında üç alan da boş metin olarak geliyor.
+        // trimOrNull sayesinde veritabanına boş metin değil null yazılır;
+        // aksi hâlde istemci "fotoğraf var" sanıp kırık görsel gösteriyordu.
         if (request.getProfilePhotoUrl() != null) {
-            user.setProfilePhotoUrl(request.getProfilePhotoUrl());
+            user.setProfilePhotoUrl(trimOrNull(request.getProfilePhotoUrl()));
+        }
+        if (request.getProfilePhotoOriginalUrl() != null) {
+            user.setProfilePhotoOriginalUrl(trimOrNull(request.getProfilePhotoOriginalUrl()));
+        }
+        if (request.getProfilePhotoCrop() != null) {
+            user.setProfilePhotoCrop(trimOrNull(request.getProfilePhotoCrop()));
         }
 
         User saved = userRepository.save(user);
@@ -225,6 +234,8 @@ public class UserService {
                 .lastName(user.getLastName())
                 .email(user.getEmail())
                 .profilePhotoUrl(user.getProfilePhotoUrl())
+                .profilePhotoOriginalUrl(user.getProfilePhotoOriginalUrl())
+                .profilePhotoCrop(user.getProfilePhotoCrop())
                 .bio(user.getBio())
                 .role(user.getRole())
                 .nameChangeAvailableAt(nameChangeAvailableAt)

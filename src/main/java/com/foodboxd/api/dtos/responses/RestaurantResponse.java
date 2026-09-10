@@ -1,6 +1,5 @@
 package com.foodboxd.api.dtos.responses;
 
-import com.foodboxd.api.entities.RestaurantOwnershipStatus;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
@@ -14,6 +13,11 @@ public class RestaurantResponse {
     private String name;
     private String logoUrl;
     private AddressResponse address;
-    private RestaurantOwnershipStatus ownershipStatus;
-    private boolean coOwnershipEnabled;
+
+    /** Sahibinin kullanıcı ID'si; sahipsizse null. */
+    private Long ownerId;
+
+    /** Sahiplik talebine açık mı? (ownerId == null ile aynı bilgi, istemci
+     *  kolaylığı için ayrıca veriliyor.) */
+    private boolean claimable;
 }

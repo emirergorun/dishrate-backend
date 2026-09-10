@@ -26,4 +26,21 @@ public class UpdateUserRequest {
     private String bio;
 
     private String profilePhotoUrl;
+
+    /** Kırpılmamış özgün görsel — yeniden çerçeveleme için saklanır. */
+    private String profilePhotoOriginalUrl;
+
+    /**
+     * Özgün görsel üzerindeki kırpma dikdörtgeni: "x,y,genişlik,yükseklik".
+     * <p>
+     * Boş metin de geçerlidir: fotoğraf kaldırıldığında üç alan da boş
+     * gönderiliyor. {@code @Pattern} null'ı atlar ama boş metni atlamaz —
+     * desene boş seçeneği eklenmezse kaldırma isteği 400 ile geri dönüyordu.
+     */
+    @Pattern(
+            regexp = "^$|^\\s*\\d+(\\.\\d+)?(,\\d+(\\.\\d+)?){3}\\s*$",
+            message = "Kırpma alanı 'x,y,genişlik,yükseklik' biçiminde olmalıdır"
+    )
+    @Size(max = 80, message = "Kırpma alanı en fazla 80 karakter olabilir")
+    private String profilePhotoCrop;
 }

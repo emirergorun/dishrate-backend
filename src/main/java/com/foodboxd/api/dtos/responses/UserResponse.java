@@ -18,6 +18,12 @@ public class UserResponse {
     private String lastName;
     private String email;
     private String profilePhotoUrl;
+
+    // Yeniden çerçeveleme için: kırpılmamış özgün görsel ve üzerindeki
+    // kırpma dikdörtgeni ("x,y,genişlik,yükseklik").
+    private String profilePhotoOriginalUrl;
+    private String profilePhotoCrop;
+
     private String bio;
     private UserRole role;
 

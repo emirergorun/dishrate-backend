@@ -10,7 +10,6 @@ import com.foodboxd.api.entities.User;
 import com.foodboxd.api.entities.UserRole;
 import com.foodboxd.api.exceptions.ResourceNotFoundException;
 import com.foodboxd.api.repositories.AddressRepository;
-import com.foodboxd.api.repositories.RestaurantOwnerRepository;
 import com.foodboxd.api.repositories.RestaurantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,7 +27,6 @@ public class RestaurantService {
 
     private final RestaurantRepository restaurantRepository;
     private final AddressRepository addressRepository;
-    private final RestaurantOwnerRepository restaurantOwnerRepository;
 
     // -----------------------------------------------------------------------
     // Create a restaurant
@@ -107,9 +105,9 @@ public class RestaurantService {
     @Transactional(readOnly = true)
     public List<RestaurantResponse> getMyRestaurants(User user) {
         log.debug("Fetching restaurants owned by user ID: {}", user.getUserId());
-        return restaurantOwnerRepository.findByUserUserId(user.getUserId())
+        return restaurantRepository.findByOwnerUserId(user.getUserId())
                 .stream()
-                .map(owner -> toResponse(owner.getRestaurant()))
+                .map(this::toResponse)
                 .collect(Collectors.toList());
     }
 
@@ -175,10 +173,13 @@ public class RestaurantService {
     // Yetki: kullanıcı bu restoranın sahibi mi (ya da admin mi)?
     // -----------------------------------------------------------------------
     public void assertCanManage(User user, Long restaurantId) {
-        if (user.getRole() == UserRole.ADMIN) return;
-        boolean owns = restaurantOwnerRepository
-                .findByRestaurantRestaurantIdAndUserUserId(restaurantId, user.getUserId())
-                .isPresent();
+        if (user.getRole().atLeast(UserRole.ADMIN)) return;
+
+        // Rol kaba kapı, sahiplik asıl kontrol: owner rolü olan biri
+        // BAŞKASININ restoranını yönetemez.
+        boolean owns = restaurantRepository.findById(restaurantId)
+                .map(r -> r.isOwnedBy(user.getUserId()))
+                .orElse(false);
         if (!owns) {
             throw new AccessDeniedException("Bu restoran üzerinde yetkiniz yok.");
         }
@@ -202,8 +203,10 @@ public class RestaurantService {
                 .name(restaurant.getName())
                 .logoUrl(restaurant.getLogoUrl())
                 .address(addressResponse)
-                .ownershipStatus(restaurant.getOwnershipStatus())
-                .coOwnershipEnabled(restaurant.isCoOwnershipEnabled())
+                .ownerId(restaurant.getOwner() != null
+                        ? restaurant.getOwner().getUserId()
+                        : null)
+                .claimable(restaurant.isClaimable())
                 .build();
     }
 }

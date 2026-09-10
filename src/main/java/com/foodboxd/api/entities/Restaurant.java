@@ -29,23 +29,29 @@ public class Restaurant {
     @Column(name = "logo_url", columnDefinition = "TEXT")
     private String logoUrl;
 
-    // Sahiplik durumu — admin panelinde filtreleme için
-    @Enumerated(EnumType.STRING)
-    @Column(name = "ownership_status", nullable = false, length = 20)
-    @Builder.Default
-    private RestaurantOwnershipStatus ownershipStatus = RestaurantOwnershipStatus.ADMIN_MANAGED;
-
-    // Ortak sahiplik açık mı?
-    // true → PRIMARY_OWNER, başkalarını ortak olarak davet edebilir
-    // false → sadece PRIMARY_OWNER yönetir
-    @Column(name = "co_ownership_enabled", nullable = false)
-    @Builder.Default
-    private boolean coOwnershipEnabled = false;
-
-    // Bu restoranın sahipleri (PRIMARY_OWNER + CO_OWNER'lar)
-    @OneToMany(mappedBy = "restaurant", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<RestaurantOwner> owners;
+    /**
+     * Restoranın sahibi. Sahipliğin <b>tek</b> kaynağı burasıdır.
+     *
+     * <p>null → restoran sahipsiz; katalogda görünür, puanlanabilir ve
+     * sahiplik talebine açıktır. Dolu → sahibi var; ikinci bir talep kabul
+     * edilmez.
+     *
+     * <p>Yalnızca {@code ClaimService} onay akışı bu alanı doldurur.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id")
+    private User owner;
 
     @OneToMany(mappedBy = "restaurant", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<MenuItem> menuItems;
+
+    /** Sahiplik talebine açık mı? */
+    public boolean isClaimable() {
+        return owner == null;
+    }
+
+    /** Verilen kullanıcı bu restoranın sahibi mi? */
+    public boolean isOwnedBy(Long userId) {
+        return owner != null && owner.getUserId().equals(userId);
+    }
 }

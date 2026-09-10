@@ -3,11 +3,9 @@ package com.foodboxd.api.services;
 import com.foodboxd.api.dtos.responses.NotificationResponse;
 import com.foodboxd.api.entities.AppNotification;
 import com.foodboxd.api.entities.MenuItem;
-import com.foodboxd.api.entities.RestaurantOwner;
 import com.foodboxd.api.entities.User;
 import com.foodboxd.api.exceptions.ResourceNotFoundException;
 import com.foodboxd.api.repositories.AppNotificationRepository;
-import com.foodboxd.api.repositories.RestaurantOwnerRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
@@ -23,36 +21,31 @@ import java.util.List;
 public class NotificationService {
 
     private final AppNotificationRepository notificationRepository;
-    private final RestaurantOwnerRepository restaurantOwnerRepository;
 
     /**
-     * Bir ürüne değerlendirme yapıldığında restoranın sahiplerine bildirim oluşturur.
-     * Değerlendiren kişinin adı maskeli gelir; owner kendi ürününü puanladıysa bildirim gitmez.
+     * Bir ürüne değerlendirme yapıldığında restoranın sahibine bildirim oluşturur.
+     * Değerlendiren kişinin adı maskeli gelir; sahip kendi ürününü puanladıysa
+     * bildirim gitmez. Restoran sahipsizse bildirilecek kimse yoktur.
      * FCM push eklendiğinde bu noktadan push da tetiklenecek.
      */
     @Transactional
     public void notifyOwnersNewRating(MenuItem menuItem, Long raterUserId,
                                       String maskedRaterName, BigDecimal score) {
-        List<RestaurantOwner> owners = restaurantOwnerRepository
-                .findByRestaurantRestaurantId(menuItem.getRestaurant().getRestaurantId());
+        User owner = menuItem.getRestaurant().getOwner();
+        if (owner == null || owner.getUserId().equals(raterUserId)) return;
 
-        for (RestaurantOwner owner : owners) {
-            if (owner.getUser().getUserId().equals(raterUserId)) continue;
+        notificationRepository.save(AppNotification.builder()
+                .recipient(owner)
+                .type("NEW_RATING")
+                .title("Yeni değerlendirme")
+                .body(maskedRaterName + ", \"" + menuItem.getName() + "\" için "
+                        + score.stripTrailingZeros().toPlainString() + " puan verdi.")
+                .menuItemId(menuItem.getMenuItemId())
+                .menuItemName(menuItem.getName())
+                .build());
 
-            notificationRepository.save(AppNotification.builder()
-                    .recipient(owner.getUser())
-                    .type("NEW_RATING")
-                    .title("Yeni değerlendirme")
-                    .body(maskedRaterName + ", \"" + menuItem.getName() + "\" için "
-                            + score.stripTrailingZeros().toPlainString() + " puan verdi.")
-                    .menuItemId(menuItem.getMenuItemId())
-                    .menuItemName(menuItem.getName())
-                    .build());
-        }
-        if (!owners.isEmpty()) {
-            log.info("Yeni değerlendirme bildirimi oluşturuldu. Ürün: {}, sahip sayısı: {}",
-                    menuItem.getMenuItemId(), owners.size());
-        }
+        log.info("Yeni değerlendirme bildirimi oluşturuldu. Ürün: {}, sahip ID: {}",
+                menuItem.getMenuItemId(), owner.getUserId());
     }
 
     @Transactional(readOnly = true)

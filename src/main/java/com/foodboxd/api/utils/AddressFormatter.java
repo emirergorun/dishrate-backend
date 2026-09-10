@@ -11,7 +11,8 @@ public final class AddressFormatter {
 
     private AddressFormatter() {}
 
-    public static String compose(String addressLine1,
+    public static String compose(String neighbourhood,
+                                 String addressLine1,
                                  String addressLine2,
                                  String buildingNo,
                                  String floorApartment,
@@ -20,6 +21,8 @@ public final class AddressFormatter {
                                  String city) {
         List<String> parts = new ArrayList<>();
 
+        // Mahalle en başta: "Moda Mah., Bahariye Cad., ..."
+        if (isPresent(neighbourhood)) parts.add(neighbourhood.trim() + " Mah.");
         addIfPresent(parts, addressLine1);
         addIfPresent(parts, addressLine2);
         if (isPresent(buildingNo)) parts.add("No: " + buildingNo.trim());

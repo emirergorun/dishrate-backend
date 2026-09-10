@@ -5,11 +5,13 @@ import com.foodboxd.api.dtos.requests.CreateRestaurantRequest;
 import com.foodboxd.api.dtos.requests.UpdateRestaurantRequest;
 import com.foodboxd.api.dtos.responses.AddressResponse;
 import com.foodboxd.api.dtos.responses.MenuItemResponse;
+import com.foodboxd.api.dtos.responses.RestaurantClaimResponse;
 import com.foodboxd.api.dtos.responses.RestaurantResponse;
 import com.foodboxd.api.entities.Address;
 import com.foodboxd.api.entities.User;
 import com.foodboxd.api.exceptions.ResourceNotFoundException;
 import com.foodboxd.api.repositories.AddressRepository;
+import com.foodboxd.api.services.ClaimService;
 import com.foodboxd.api.services.MenuItemService;
 import com.foodboxd.api.services.RestaurantService;
 import jakarta.validation.Valid;
@@ -28,6 +30,7 @@ public class RestaurantController {
 
     private final RestaurantService restaurantService;
     private final MenuItemService menuItemService;
+    private final ClaimService claimService;
     private final AddressRepository addressRepository;
 
     /**
@@ -137,5 +140,30 @@ public class RestaurantController {
             @AuthenticationPrincipal User currentUser) {
         restaurantService.deleteRestaurant(restaurantId, currentUser);
         return ResponseEntity.noContent().build();
+    }
+
+    // ── Sahiplik talebi ───────────────────────────────────────────────────────
+
+    /**
+     * POST /api/v1/restaurants/{restaurantId}/claim
+     * Giriş yapmış herhangi bir kullanıcı sahipsiz bir restoranın sahipliğini
+     * talep edebilir. Talep PENDING olarak açılır; kararı admin verir.
+     */
+    @PostMapping("/{restaurantId}/claim")
+    public ResponseEntity<RestaurantClaimResponse> claim(
+            @PathVariable Long restaurantId,
+            @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(claimService.claim(currentUser, restaurantId));
+    }
+
+    /**
+     * GET /api/v1/restaurants/claims/me
+     * Kullanıcının kendi sahiplik talepleri — durum takibi için.
+     */
+    @GetMapping("/claims/me")
+    public ResponseEntity<List<RestaurantClaimResponse>> myClaims(
+            @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(claimService.myClaims(currentUser));
     }
 }

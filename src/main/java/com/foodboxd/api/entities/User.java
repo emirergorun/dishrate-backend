@@ -42,8 +42,24 @@ public class User {
     @Column(name = "password_hash", nullable = false, columnDefinition = "TEXT")
     private String passwordHash;
 
+    /** Kırpılmış, uygulamada gösterilen hâli. */
     @Column(name = "profile_photo_url", columnDefinition = "TEXT")
     private String profilePhotoUrl;
+
+    /**
+     * Kırpılmamış özgün yükleme. Kullanıcı fotoğrafını yeniden çerçevelemek
+     * istediğinde galeriden yeniden seçmek zorunda kalmasın diye saklanır;
+     * kırpılmışı tekrar kırpmak kaliteyi her seferinde düşürürdü.
+     */
+    @Column(name = "profile_photo_original_url", columnDefinition = "TEXT")
+    private String profilePhotoOriginalUrl;
+
+    /**
+     * Özgün görsel üzerindeki kırpma dikdörtgeni: "x,y,genişlik,yükseklik".
+     * Düzenleme ekranı açıldığında önceki çerçeveleme aynen geri yüklenir.
+     */
+    @Column(name = "profile_photo_crop", length = 80)
+    private String profilePhotoCrop;
 
     @Column(name = "bio", columnDefinition = "TEXT")
     private String bio;

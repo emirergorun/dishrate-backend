@@ -1,7 +1,7 @@
 package com.foodboxd.api.dtos.requests;
 
-import jakarta.validation.constraints.Email;
 import com.foodboxd.api.validation.StrongPassword;
+import com.foodboxd.api.validation.ValidEmail;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -29,7 +29,7 @@ public class CreateUserRequest {
     private String lastName;
 
     @NotBlank(message = "E-posta adresi boş bırakılamaz")
-    @Email(message = "Geçerli bir e-posta adresi giriniz")
+    @ValidEmail
     @Size(max = 150, message = "E-posta adresi en fazla 150 karakter olabilir")
     private String email;
 

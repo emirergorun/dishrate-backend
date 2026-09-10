@@ -14,7 +14,6 @@ import com.foodboxd.api.exceptions.ResourceAlreadyExistsException;
 import com.foodboxd.api.exceptions.ResourceNotFoundException;
 import com.foodboxd.api.repositories.CategoryRepository;
 import com.foodboxd.api.repositories.MenuItemRepository;
-import com.foodboxd.api.repositories.RestaurantOwnerRepository;
 import com.foodboxd.api.repositories.RestaurantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,7 +32,6 @@ public class MenuItemService {
     private final MenuItemRepository menuItemRepository;
     private final RestaurantRepository restaurantRepository;
     private final CategoryRepository categoryRepository;
-    private final RestaurantOwnerRepository restaurantOwnerRepository;
 
     // -----------------------------------------------------------------------
     // Create a category
@@ -222,10 +220,10 @@ public class MenuItemService {
     // Yetki: kullanıcı bu restoranın sahibi mi (ya da admin mi)?
     // -----------------------------------------------------------------------
     private void assertCanManage(User user, Long restaurantId) {
-        if (user.getRole() == UserRole.ADMIN) return;
-        boolean owns = restaurantOwnerRepository
-                .findByRestaurantRestaurantIdAndUserUserId(restaurantId, user.getUserId())
-                .isPresent();
+        if (user.getRole().atLeast(UserRole.ADMIN)) return;
+        boolean owns = restaurantRepository.findById(restaurantId)
+                .map(r -> r.isOwnedBy(user.getUserId()))
+                .orElse(false);
         if (!owns) {
             throw new AccessDeniedException("Bu restoran üzerinde yetkiniz yok.");
         }
