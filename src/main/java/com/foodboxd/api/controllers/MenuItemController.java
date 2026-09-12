@@ -4,8 +4,10 @@ import com.foodboxd.api.dtos.requests.CreateCategoryRequest;
 import com.foodboxd.api.dtos.requests.CreateMenuItemRequest;
 import com.foodboxd.api.dtos.requests.UpdateMenuItemRequest;
 import com.foodboxd.api.dtos.responses.CategoryResponse;
+import com.foodboxd.api.dtos.responses.FeedSectionResponse;
 import com.foodboxd.api.dtos.responses.MenuItemResponse;
 import com.foodboxd.api.entities.User;
+import com.foodboxd.api.services.FeedService;
 import com.foodboxd.api.services.MenuItemService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +24,41 @@ import java.util.List;
 public class MenuItemController {
 
     private final MenuItemService menuItemService;
+    private final FeedService feedService;
+
+    // ── Keşfet akışı ──────────────────────────────────────────────────────────
+
+    /**
+     * GET /api/v1/menu-items/feed?city=İstanbul&district=Kadıköy&limit=10
+     *
+     * <p>Keşfet ekranının tek isteği. Konuma göre süzülmüş bölümler döner,
+     * her biri en fazla {@code limit} öğe. İstemci artık tüm katalogu
+     * indirmiyor.
+     */
+    @GetMapping("/feed")
+    public ResponseEntity<List<FeedSectionResponse>> feed(
+            @RequestParam(required = false) String city,
+            @RequestParam(required = false) String district,
+            @RequestParam(defaultValue = "10") int limit) {
+        int guvenliLimit = Math.min(Math.max(limit, 1), 30);
+        return ResponseEntity.ok(feedService.feed(city, district, guvenliLimit));
+    }
+
+    /**
+     * GET /api/v1/menu-items/feed/{key}?city=&district=&page=0&size=20
+     * "Tümünü gör" ekranı — bölümün devamını sayfa sayfa verir.
+     */
+    @GetMapping("/feed/{key}")
+    public ResponseEntity<List<MenuItemResponse>> feedSection(
+            @PathVariable String key,
+            @RequestParam(required = false) String city,
+            @RequestParam(required = false) String district,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        int guvenliBoyut = Math.min(Math.max(size, 1), 50);
+        return ResponseEntity.ok(
+                feedService.section(key, city, district, Math.max(page, 0), guvenliBoyut));
+    }
 
     /**
      * POST /api/v1/menu-items/categories

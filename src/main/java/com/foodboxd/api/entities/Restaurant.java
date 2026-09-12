@@ -42,6 +42,16 @@ public class Restaurant {
     @JoinColumn(name = "owner_id")
     private User owner;
 
+    /**
+     * Kaydın nereden geldiği. Şu an tek değer: {@code "mock"} — geliştirme için
+     * üretilen sahte veri. Gerçek kayıtlarda null.
+     *
+     * <p>Sahte veriyi tek komutla ve <b>yalnızca onu</b> silebilmek için var
+     * ({@code MockDataSeeder}); kendi hesabın ve gerçek kayıtlar etkilenmez.
+     */
+    @Column(name = "seed_tag", length = 20)
+    private String seedTag;
+
     @OneToMany(mappedBy = "restaurant", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<MenuItem> menuItems;
 

@@ -15,4 +15,7 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, Long> {
 
     /** Bir kullanıcının sahibi olduğu restoranlar (owner paneli). */
     List<Restaurant> findByOwnerUserId(Long userId);
+
+    /** Sahte veri sayacı — tohumlayıcının tekrar çalışmasını engeller. */
+    long countBySeedTag(String seedTag);
 }
