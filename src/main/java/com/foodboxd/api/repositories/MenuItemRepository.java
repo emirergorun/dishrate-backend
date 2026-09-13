@@ -37,13 +37,17 @@ public interface MenuItemRepository extends JpaRepository<MenuItem, Long> {
      *
      * <p>{@code catCount} parametresi JPQL'in boş koleksiyonla baş edememesi
      * yüzünden var: 0 ise kategori süzgeci hiç uygulanmaz.
+     *
+     * <p>İl/ilçe "yok" anlamında {@code null} değil boş metin alır: Hibernate
+     * tipsiz {@code null}'u Postgres'e bytea olarak bağlıyor ve
+     * {@code LOWER(bytea)} sorguyu patlatıyor.
      */
     @Query("""
             SELECT mi FROM MenuItem mi
               JOIN mi.restaurant r
               JOIN r.address a
-            WHERE (:city IS NULL OR LOWER(a.city) = LOWER(:city))
-              AND (:district IS NULL OR LOWER(a.district) = LOWER(:district))
+            WHERE (:city = '' OR LOWER(a.city) = LOWER(:city))
+              AND (:district = '' OR LOWER(a.district) = LOWER(:district))
               AND (:catCount = 0 OR mi.category.name IN :categories)
               AND mi.averageRating >= :minRating
             """)

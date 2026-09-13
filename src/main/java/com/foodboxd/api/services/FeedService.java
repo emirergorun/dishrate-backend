@@ -3,17 +3,18 @@ package com.foodboxd.api.services;
 import com.foodboxd.api.dtos.responses.FeedSectionResponse;
 import com.foodboxd.api.dtos.responses.MenuItemResponse;
 import com.foodboxd.api.entities.MenuItem;
+import com.foodboxd.api.exceptions.ResourceNotFoundException;
 import com.foodboxd.api.repositories.MenuItemRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.Collection;
 import java.util.List;
 
 /**
@@ -51,7 +52,7 @@ public class FeedService {
             new Bolum("cheat-meal",
                     List.of("Burger", "Pizza", "Tatlı", "Kebap", "İtalyan", "Noodle", "Sandviç"),
                     SIFIR, PUANA_GORE, 0),
-            new Bolum("healthy", List.of("Vegan", "Kahvaltı", "Meze"), SIFIR, PUANA_GORE, 0),
+            new Bolum("healthy", List.of("Vegan", "Salata", "Kahvaltı", "Meze"), SIFIR, PUANA_GORE, 0),
             new Bolum("hidden-gems", List.of("Meze", "Noodle", "Vegan", "Tavuk"),
                     SIFIR, PUANA_GORE, 0));
 
@@ -66,13 +67,15 @@ public class FeedService {
      * yoksa bazı bölümler ilçeden bazıları ilden gelip liste tutarsızlaşır.
      */
     @Transactional(readOnly = true)
-    public List<FeedSectionResponse> feed(String city, String district, int limit) {
-        String etkinIlce = ilceYeterliMi(city, district) ? district : null;
-        if (district != null && etkinIlce == null) {
+    public List<FeedSectionResponse> feed(String city, String district, String category, int limit) {
+        String il = temiz(city);
+        String kategori = temiz(category);
+        String ilce = ilceYeterliMi(il, temiz(district), kategori) ? temiz(district) : "";
+        if (!temiz(district).isEmpty() && ilce.isEmpty()) {
             log.debug("İlçede yeterli içerik yok ({}), il geneline düşüldü.", district);
         }
         return BOLUMLER.stream()
-                .map(b -> bolumGetir(b, city, etkinIlce, limit))
+                .map(b -> bolumGetir(b, il, ilce, kategori, limit))
                 .filter(s -> !s.getItems().isEmpty())
                 .toList();
     }
@@ -82,23 +85,26 @@ public class FeedService {
      */
     @Transactional(readOnly = true)
     public List<MenuItemResponse> section(String key, String city, String district,
-                                          int page, int size) {
+                                          String category, int page, int size) {
         Bolum bolum = BOLUMLER.stream()
                 .filter(b -> b.key().equals(key))
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Bilinmeyen bölüm: " + key));
+                .orElseThrow(() -> new ResourceNotFoundException("Bilinmeyen bölüm: " + key));
 
-        String etkinIlce = ilceYeterliMi(city, district) ? district : null;
+        String il = temiz(city);
+        String kategori = temiz(category);
+        String ilce = ilceYeterliMi(il, temiz(district), kategori) ? temiz(district) : "";
         // Bölümün kendi başlangıç sayfası korunur: "most-wanted" ilk sayfayı atlar.
-        return sorgula(bolum, city, etkinIlce, bolum.sayfa() + page, size)
+        return sorgula(bolum, il, ilce, kategori, bolum.sayfa() + page, size)
                 .map(menuItemService::toResponse)
                 .toList();
     }
 
     // ── İç yardımcılar ────────────────────────────────────────────────────────
 
-    private FeedSectionResponse bolumGetir(Bolum b, String city, String district, int limit) {
-        Page<MenuItem> sayfa = sorgula(b, city, district, b.sayfa(), limit);
+    private FeedSectionResponse bolumGetir(Bolum b, String il, String ilce,
+                                           String kategori, int limit) {
+        Page<MenuItem> sayfa = sorgula(b, il, ilce, kategori, b.sayfa(), limit);
         return FeedSectionResponse.builder()
                 .key(b.key())
                 .items(sayfa.map(menuItemService::toResponse).toList())
@@ -106,33 +112,40 @@ public class FeedService {
                 .build();
     }
 
-    private Page<MenuItem> sorgula(Bolum b, String city, String district, int sayfa, int boyut) {
-        Collection<String> kategoriler = b.kategoriler().isEmpty()
-                ? List.of("")            // JPQL boş koleksiyon kabul etmiyor; catCount=0 ile devre dışı
-                : b.kategoriler();
+    /**
+     * Seçili kategori çipi bölümün kendi kategorileriyle kesiştirilir:
+     * "Burger" seçiliyken "Diyet dostu" bölümü hiç sorgulanmadan boş döner.
+     */
+    private Page<MenuItem> sorgula(Bolum b, String il, String ilce, String kategori,
+                                   int sayfa, int boyut) {
+        List<String> kategoriler;
+        if (kategori.isEmpty()) {
+            kategoriler = b.kategoriler();
+        } else if (b.kategoriler().isEmpty() || b.kategoriler().contains(kategori)) {
+            kategoriler = List.of(kategori);
+        } else {
+            return new PageImpl<>(List.of());
+        }
         return menuItemRepository.findForFeed(
-                bos(city) ? null : city,
-                bos(district) ? null : district,
-                kategoriler,
-                b.kategoriler().size(),
+                il, ilce,
+                // JPQL boş koleksiyon kabul etmiyor; catCount=0 ile devre dışı
+                kategoriler.isEmpty() ? List.of("") : kategoriler,
+                kategoriler.size(),
                 b.enAzPuan(),
                 PageRequest.of(sayfa, boyut, b.sirala()));
     }
 
-    private boolean ilceYeterliMi(String city, String district) {
-        if (bos(district)) return false;
+    private boolean ilceYeterliMi(String il, String ilce, String kategori) {
+        if (ilce.isEmpty()) return false;
+        List<String> kategoriler = kategori.isEmpty() ? List.of("") : List.of(kategori);
         long adet = menuItemRepository.findForFeed(
-                bos(city) ? null : city, district, List.of(""), 0, SIFIR,
+                il, ilce, kategoriler, kategori.isEmpty() ? 0 : 1, SIFIR,
                 PageRequest.of(0, 1)).getTotalElements();
         return adet >= ILCE_ESIGI;
     }
 
-    private static boolean bos(String s) {
-        return s == null || s.isBlank();
-    }
-
-    /** İstemcinin gönderebileceği bölüm anahtarları. */
-    public static List<String> keys() {
-        return BOLUMLER.stream().map(Bolum::key).toList();
+    /** Sorguya "süzgeç yok" anlamında null yerine boş metin gider. */
+    private static String temiz(String s) {
+        return s == null ? "" : s.trim();
     }
 }
