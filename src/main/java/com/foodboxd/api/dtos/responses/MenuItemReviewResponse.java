@@ -20,5 +20,6 @@ public class MenuItemReviewResponse {
     private boolean mine;
     private BigDecimal score;
     private String comment;
+    private String photoUrl;
     private LocalDateTime ratedAt;
 }

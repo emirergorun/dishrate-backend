@@ -45,11 +45,13 @@ public class DataSeeder implements CommandLineRunner {
     private static final String BURGER4 = "https://images.unsplash.com/photo-1594212699903-ec8a3eca50f5?w=400&h=300&fit=crop";
     private static final String PIZZA1 = "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400&h=300&fit=crop";
     private static final String PIZZA2 = "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=300&fit=crop";
-    private static final String SUSHI1 = "https://images.unsplash.com/photo-1617196034183-421b4040ed20?w=400&h=300&fit=crop";
+    // Önceki Unsplash adresi 404 dönmeye başladı; yerine Wikimedia Commons.
+    private static final String SUSHI1 = "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3b/Nigiri_Sushi_%2826478725732%29.jpg/500px-Nigiri_Sushi_%2826478725732%29.jpg";
     private static final String SUSHI2 = "https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=400&h=300&fit=crop";
     private static final String KEBAP1 = "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=400&h=300&fit=crop";
     private static final String KEBAP2 = "https://images.unsplash.com/photo-1561651823-34feb02250e4?w=400&h=300&fit=crop";
-    private static final String TAVUK = "https://images.unsplash.com/photo-1532550884612-72b92802ec04?w=400&h=300&fit=crop";
+    // Önceki Unsplash adresi 404 dönmeye başladı; yerine Wikimedia Commons.
+    private static final String TAVUK = "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4e/Chicken_at_grill.jpg/500px-Chicken_at_grill.jpg";
     private static final String KAHVALTI1 = "https://images.unsplash.com/photo-1608039829572-78524f79c4c7?w=400&h=300&fit=crop";
     private static final String KAHVALTI2 = "https://images.unsplash.com/photo-1525351484163-7529414344d8?w=400&h=300&fit=crop";
     private static final String TATLI = "https://images.unsplash.com/photo-1519676867240-f03562e64548?w=400&h=300&fit=crop";
@@ -76,7 +78,7 @@ public class DataSeeder implements CommandLineRunner {
 
         // Kategoriler
         for (String c : new String[]{
-                "Burger", "Pizza", "Kebap", "Sushi", "Tatlı", "Kahvaltı",
+                "Burger", "Pizza", "Türk Mutfağı", "Ev Yemeği", "Sushi", "Tatlı", "Kahvaltı",
                 "İtalyan", "Vegan", "Meze", "Noodle", "Tavuk", "Sandviç"}) {
             categories.put(c, categoryRepository.save(Category.builder().name(c).build()));
         }
@@ -133,23 +135,23 @@ public class DataSeeder implements CommandLineRunner {
         item(r, "Sushi", "Yellowtail Jalapeño", 620, 4.8, SUSHI1);
         item(r, "Sushi", "Wagyu Gyoza", 560, 4.7, SUSHI2);
 
-        // ── Kebap ──
+        // ── Türk Mutfağı ──
         r = restaurant("Ocakbaşı 1969", "İstanbul", "Karaköy", "Kemankeş Cad. No:11, Karaköy", 41.0231, 28.9766);
-        item(r, "Kebap", "Adana Kebap", 350, 4.8, KEBAP1);
-        item(r, "Kebap", "Urfa Kebap", 340, 4.7, KEBAP1);
-        item(r, "Kebap", "Kuzu Şiş", 420, 4.9, KEBAP1);
-        item(r, "Kebap", "Patlıcan Kebabı", 380, 4.6, KEBAP1);
+        item(r, "Türk Mutfağı", "Adana Kebap", 350, 4.8, KEBAP1);
+        item(r, "Türk Mutfağı", "Urfa Kebap", 340, 4.7, KEBAP1);
+        item(r, "Türk Mutfağı", "Kuzu Şiş", 420, 4.9, KEBAP1);
+        item(r, "Türk Mutfağı", "Patlıcan Kebabı", 380, 4.6, KEBAP1);
 
         r = restaurant("Karadeniz Döner", "İstanbul", "Beşiktaş", "Barbaros Blv. No:3, Beşiktaş", 41.0430, 29.0030);
-        item(r, "Kebap", "Dürüm Döner", 120, 4.5, KEBAP2);
-        item(r, "Kebap", "Ekmek Arası Döner", 100, 4.4, KEBAP2);
-        item(r, "Kebap", "Yarım Porsiyon", 80, 4.3, KEBAP2);
+        item(r, "Türk Mutfağı", "Dürüm Döner", 120, 4.5, KEBAP2);
+        item(r, "Türk Mutfağı", "Ekmek Arası Döner", 100, 4.4, KEBAP2);
+        item(r, "Türk Mutfağı", "Yarım Porsiyon", 80, 4.3, KEBAP2);
         item(r, "Tavuk", "Tavuk Dürüm", 110, 4.4, TAVUK);
 
         r = restaurant("Mersin Tantunisi", "İstanbul", "Bağcılar", "Fevzi Paşa Cad. No:55, Bağcılar", 41.0353, 28.8560);
-        item(r, "Kebap", "Tantuni", 180, 4.9, KEBAP2);
-        item(r, "Kebap", "Dürüm Tantuni", 200, 4.8, KEBAP2);
-        item(r, "Kebap", "Acılı Tantuni", 190, 4.7, KEBAP1);
+        item(r, "Türk Mutfağı", "Tantuni", 180, 4.9, KEBAP2);
+        item(r, "Türk Mutfağı", "Dürüm Tantuni", 200, 4.8, KEBAP2);
+        item(r, "Türk Mutfağı", "Acılı Tantuni", 190, 4.7, KEBAP1);
         item(r, "Vegan", "Şalgam Suyu", 30, 4.5, VEGAN2);
 
         // ── Tavuk ──
@@ -188,7 +190,7 @@ public class DataSeeder implements CommandLineRunner {
         r = restaurant("Şanlıurfa Sofrası", "İstanbul", "Fatih", "Ordu Cad. No:12, Fatih", 41.0188, 28.9410);
         item(r, "Tatlı", "Künefe", 180, 4.9, TATLI);
         item(r, "Tatlı", "Sütlü Künefe", 190, 4.8, TATLI);
-        item(r, "Kebap", "Adana Kebap", 320, 4.7, KEBAP1);
+        item(r, "Türk Mutfağı", "Adana Kebap", 320, 4.7, KEBAP1);
         item(r, "Vegan", "Ayran", 25, 4.5, VEGAN2);
 
         // ── İtalyan ──

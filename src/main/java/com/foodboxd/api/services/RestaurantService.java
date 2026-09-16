@@ -10,14 +10,20 @@ import com.foodboxd.api.entities.User;
 import com.foodboxd.api.entities.UserRole;
 import com.foodboxd.api.exceptions.ResourceNotFoundException;
 import com.foodboxd.api.repositories.AddressRepository;
+import com.foodboxd.api.repositories.MenuItemRepository;
 import com.foodboxd.api.repositories.RestaurantRepository;
+import com.foodboxd.api.utils.AramaMetni;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -27,6 +33,7 @@ public class RestaurantService {
 
     private final RestaurantRepository restaurantRepository;
     private final AddressRepository addressRepository;
+    private final MenuItemRepository menuItemRepository;
 
     // -----------------------------------------------------------------------
     // Create a restaurant
@@ -69,10 +76,7 @@ public class RestaurantService {
     @Transactional(readOnly = true)
     public List<RestaurantResponse> getAllRestaurants() {
         log.debug("Fetching all restaurants.");
-        return restaurantRepository.findAll()
-                .stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+        return toResponses(restaurantRepository.findAll());
     }
 
     // -----------------------------------------------------------------------
@@ -81,7 +85,9 @@ public class RestaurantService {
     @Transactional(readOnly = true)
     public List<RestaurantResponse> searchByName(String name) {
         log.debug("Searching restaurants by name: {}", name);
-        return restaurantRepository.findByNameContainingIgnoreCase(name)
+        if (AramaMetni.normalize(name).isEmpty()) return List.of();
+        return restaurantRepository.searchByNormalizedName(
+                        AramaMetni.icerir(name), AramaMetni.KAYNAK, AramaMetni.HEDEF, 50)
                 .stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
@@ -93,10 +99,7 @@ public class RestaurantService {
     @Transactional(readOnly = true)
     public List<RestaurantResponse> getByCity(String city) {
         log.debug("Fetching restaurants by city: {}", city);
-        return restaurantRepository.findByAddress_City(city)
-                .stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+        return toResponses(restaurantRepository.findByAddress_City(city));
     }
 
     // -----------------------------------------------------------------------
@@ -189,6 +192,36 @@ public class RestaurantService {
     // Public: Entity → Response DTO (used by other services)
     // -----------------------------------------------------------------------
     public RestaurantResponse toResponse(Restaurant restaurant) {
+        return toResponse(restaurant, anaKategori(
+                menuItemRepository.countCategoriesOfRestaurant(restaurant.getRestaurantId()), 0));
+    }
+
+    /**
+     * Liste için: kategori sayıları tek sorguda çekilir, restoran başına ayrı
+     * sorgu atılmaz (harita tüm restoranları istiyor).
+     */
+    private List<RestaurantResponse> toResponses(List<Restaurant> restaurants) {
+        Map<Long, List<Object[]>> sayilar = new HashMap<>();
+        for (Object[] satir : menuItemRepository.countCategoriesPerRestaurant()) {
+            sayilar.computeIfAbsent((Long) satir[0], k -> new ArrayList<>())
+                    .add(new Object[]{satir[1], satir[2]});
+        }
+        return restaurants.stream()
+                .map(r -> toResponse(r, anaKategori(
+                        sayilar.getOrDefault(r.getRestaurantId(), List.of()), 0)))
+                .collect(Collectors.toList());
+    }
+
+    /** [kategori, adet] satırlarından en kalabalık kategori; eşitlikte alfabetik ilk. */
+    private static String anaKategori(List<Object[]> satirlar, int adIndeksi) {
+        return satirlar.stream()
+                .max(Comparator.<Object[]>comparingLong(s -> (Long) s[adIndeksi + 1])
+                        .thenComparing(s -> (String) s[adIndeksi], Comparator.reverseOrder()))
+                .map(s -> (String) s[adIndeksi])
+                .orElse(null);
+    }
+
+    private RestaurantResponse toResponse(Restaurant restaurant, String categoryName) {
         AddressResponse addressResponse = AddressResponse.builder()
                 .addressId(restaurant.getAddress().getAddressId())
                 .city(restaurant.getAddress().getCity())
@@ -207,6 +240,7 @@ public class RestaurantService {
                         ? restaurant.getOwner().getUserId()
                         : null)
                 .claimable(restaurant.isClaimable())
+                .categoryName(categoryName)
                 .build();
     }
 }

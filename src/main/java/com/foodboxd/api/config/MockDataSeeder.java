@@ -22,7 +22,7 @@ import java.util.*;
  *
  * <h2>Açma / kapama</h2>
  * <pre>
- *   app.seed.mock=true    → veriyi oluşturur (zaten varsa dokunmaz)
+ *   app.seed.mock=true    → veriyi oluşturur; zaten varsa güncel tanımlara getirir
  *   app.seed.mock=false   → hiçbir şey yapmaz (varsayılan)
  *   app.seed.mock.wipe=true → sahte veriyi siler ve çıkar
  * </pre>
@@ -32,6 +32,11 @@ import java.util.*;
  * e-postası {@code @mock.test} ile biter. Silme yalnızca bu işareti taşıyanlara
  * dokunur; senin kendi hesabın, kendi puanların ve {@link DataSeeder}'ın
  * ürettiği demo veri etkilenmez.
+ *
+ * <h2>Veri zaten varken</h2>
+ * Silip yeniden üretmez — kimlikler değişir, senin sahte yemeklere verdiğin
+ * puanlar giderdi. Onun yerine {@link #senkronla()} yemeklerin kategorisini ve
+ * fotoğrafını güncel tablolara göre düzeltir, eksik restoran türlerini ekler.
  *
  * <h2>Puanlar neden rastgele değil</h2>
  * Düz rastgele puan her yemeğin ortalamasını 3.0'a yakınsatır; "En İyiler" gibi
@@ -49,7 +54,7 @@ import java.util.*;
  * {@code kullanici001@mock.test} biçiminde.
  */
 @Slf4j
-@Order(3)
+@Order(4)
 @Component
 @RequiredArgsConstructor
 public class MockDataSeeder implements CommandLineRunner {
@@ -62,6 +67,7 @@ public class MockDataSeeder implements CommandLineRunner {
     private final RatingRepository ratingRepository;
     private final PasswordEncoder passwordEncoder;
     private final EntityManager entityManager;
+    private final YemekFotograflari fotograflar;
 
     @Value("${app.seed.mock:false}")
     private boolean mockEnabled;
@@ -73,6 +79,8 @@ public class MockDataSeeder implements CommandLineRunner {
     private static final int RESTORAN_SAYISI = 180;
     private static final int KULLANICI_SAYISI = 150;
     private static final int HEDEF_PUAN_SAYISI = 12_000;
+    /** Ev yemeği türü sonradan eklendi; mevcut veriye bu kadar restoran eklenir. */
+    private static final int EV_YEMEGI_EK_RESTORAN = 20;
     private static final String ETIKET = "mock";
     private static final String EPOSTA_ALANI = "@mock.test";
     private static final String SIFRE = "Deneme1234!";
@@ -90,8 +98,7 @@ public class MockDataSeeder implements CommandLineRunner {
         if (!mockEnabled) return;
 
         if (restaurantRepository.countBySeedTag(ETIKET) > 0) {
-            log.info("Sahte veri zaten mevcut ({} restoran), tohumlama atlandı.",
-                    restaurantRepository.countBySeedTag(ETIKET));
+            senkronla();
             return;
         }
 
@@ -100,13 +107,74 @@ public class MockDataSeeder implements CommandLineRunner {
 
         Map<String, Category> kategoriler = kategorileriHazirla();
         List<User> kullanicilar = kullanicilariUret();
-        List<MenuItem> yemekler = restoranVeMenuleriUret(kategoriler);
+        List<MenuItem> yemekler = restoranVeMenuleriUret(
+                kategoriler, RESTORAN_SAYISI, null, new HashSet<>());
         puanlariUret(yemekler, kullanicilar);
 
         log.info("Sahte veri hazır: {} restoran, {} yemek, {} kullanıcı, {} puan ({} sn).",
                 restaurantRepository.countBySeedTag(ETIKET), yemekler.size(),
                 kullanicilar.size(), ratingRepository.count(),
                 (System.currentTimeMillis() - basla) / 1000);
+    }
+
+    // ── Mevcut veriyi güncelleme ──────────────────────────────────────────────
+
+    /**
+     * Silmeden, mevcut sahte veriyi güncel tanımlara getirir:
+     * <ul>
+     *   <li>yemeğin kategorisi {@link #YEMEKLER} tablosuna göre düzeltilir
+     *       (örn. lahmacun artık "Türk Mutfağı"),</li>
+     *   <li>fotoğrafı havuzda olmayan yemek havuzdan fotoğraf alır,</li>
+     *   <li>hiç "Ev Yemeği" restoranı yoksa eklenir.</li>
+     * </ul>
+     */
+    private void senkronla() {
+        Map<String, Category> kategoriler = kategorileriHazirla();
+
+        int kategoriDuzeltilen = 0;
+        int fotoDuzeltilen = 0;
+        List<MenuItem> yemekler = menuItemRepository.findBySeedTag(ETIKET);
+        for (MenuItem mi : yemekler) {
+            String dogru = YEMEK_KATEGORISI.get(mi.getName());
+            if (dogru != null && (mi.getCategory() == null
+                    || !dogru.equals(mi.getCategory().getName()))) {
+                mi.setCategory(kategoriler.get(dogru));
+                kategoriDuzeltilen++;
+            }
+            List<String> havuz = fotograflar.fotolar(mi.getName());
+            if (!havuz.isEmpty() && !havuz.contains(mi.getPhotoUrl())) {
+                mi.setPhotoUrl(fotograflar.sec(mi.getName(), mi.getMenuItemId()));
+                fotoDuzeltilen++;
+            }
+        }
+        menuItemRepository.saveAll(yemekler);
+
+        Set<String> adlar = new HashSet<>();
+        boolean evYemegiVar = false;
+        for (Restaurant r : restaurantRepository.findBySeedTag(ETIKET)) {
+            adlar.add(r.getName());
+            for (String tur : TUR.get("Ev Yemeği")) {
+                if (r.getName().endsWith(tur)) evYemegiVar = true;
+            }
+        }
+
+        int eklenen = 0;
+        if (!evYemegiVar) {
+            List<User> kullanicilar = entityManager
+                    .createQuery("SELECT u FROM User u WHERE u.email LIKE :alan", User.class)
+                    .setParameter("alan", "%" + EPOSTA_ALANI)
+                    .getResultList();
+            if (!kullanicilar.isEmpty()) {
+                List<MenuItem> yeni = restoranVeMenuleriUret(
+                        kategoriler, EV_YEMEGI_EK_RESTORAN, "Ev Yemeği", adlar);
+                puanlariUret(yeni, kullanicilar);
+                eklenen = EV_YEMEGI_EK_RESTORAN;
+            }
+        }
+
+        log.info("Sahte veri güncellendi: {} yemeğin kategorisi, {} yemeğin fotoğrafı "
+                + "düzeltildi, {} ev yemeği restoranı eklendi.",
+                kategoriDuzeltilen, fotoDuzeltilen, eklenen);
     }
 
     // ── Silme ─────────────────────────────────────────────────────────────────
@@ -203,12 +271,18 @@ public class MockDataSeeder implements CommandLineRunner {
 
     // ── Restoranlar ve menüler ────────────────────────────────────────────────
 
-    private List<MenuItem> restoranVeMenuleriUret(Map<String, Category> kategoriler) {
+    /**
+     * @param sabitKategori {@code null} → her restoranın türü rastgele
+     * @param kullanilanAdlar mevcut restoran adları; yeni adlar bunlarla çakışmaz
+     */
+    private List<MenuItem> restoranVeMenuleriUret(Map<String, Category> kategoriler, int adet,
+                                                  String sabitKategori,
+                                                  Set<String> kullanilanAdlar) {
         List<MenuItem> tumYemekler = new ArrayList<>();
-        Set<String> kullanilanAdlar = new HashSet<>();
 
-        for (int i = 0; i < RESTORAN_SAYISI; i++) {
-            String kategori = KATEGORILER[rnd.nextInt(KATEGORILER.length)];
+        for (int i = 0; i < adet; i++) {
+            String kategori = sabitKategori != null ? sabitKategori
+                    : KATEGORILER[rnd.nextInt(KATEGORILER.length)];
             Ilce ilce = ILCELER[agirlikliIlce()];
 
             String ad = benzersizAd(kategori, ilce.ad(), kullanilanAdlar);
@@ -263,8 +337,9 @@ public class MockDataSeeder implements CommandLineRunner {
                     .category(kategoriler.get(kategori))
                     .name(ad)
                     .price(BigDecimal.valueOf(fiyat))
-                    .photoUrl(FOTO.get(kategori)[rnd.nextInt(FOTO.get(kategori).length)])
+                    .photoUrl(fotograflar.sec(ad, rnd.nextInt(1_000)))
                     .averageRating(BigDecimal.ZERO)
+                    .ratingCount(0)
                     .build());
         }
         return menuItemRepository.saveAll(yemekler);
@@ -280,8 +355,10 @@ public class MockDataSeeder implements CommandLineRunner {
         List<Rating> tampon = new ArrayList<>(1000);
         int toplam = 0;
 
-        // Yemek başına düşen ortalama puan sayısı
-        double ortalamaPuanSayisi = (double) HEDEF_PUAN_SAYISI / yemekler.size();
+        // Yemek başına düşen ortalama puan sayısı. Tüm üretimdeki yemek sayısına
+        // göre sabit: sonradan eklenen 20 restoranlık bir grup kendi küçük
+        // yemek sayısına bölünseydi yemek başına onlarca puan alırdı.
+        double ortalamaPuanSayisi = (double) HEDEF_PUAN_SAYISI / (RESTORAN_SAYISI * 7);
 
         for (MenuItem yemek : yemekler) {
             double kalite = kaliteUret();
@@ -306,6 +383,7 @@ public class MockDataSeeder implements CommandLineRunner {
             }
             yemek.setAverageRating(BigDecimal.valueOf(toplamSkor / kacPuan)
                     .setScale(2, RoundingMode.HALF_UP));
+            yemek.setRatingCount(kacPuan);
             toplam += kacPuan;
 
             if (tampon.size() >= 1000) {
@@ -384,7 +462,7 @@ public class MockDataSeeder implements CommandLineRunner {
     };
 
     private static final String[] KATEGORILER = {
-            "Burger", "Pizza", "Kebap", "Sushi", "Tatlı", "Kahvaltı",
+            "Burger", "Pizza", "Türk Mutfağı", "Ev Yemeği", "Sushi", "Tatlı", "Kahvaltı",
             "İtalyan", "Vegan", "Meze", "Noodle", "Tavuk", "Sandviç"};
 
     private static final String[] YAN_KATEGORILER = {"Tatlı", "Vegan", "Sandviç"};
@@ -396,7 +474,8 @@ public class MockDataSeeder implements CommandLineRunner {
     private static final Map<String, String[]> TUR = Map.ofEntries(
             Map.entry("Burger", new String[]{"Burger Evi", "Burger House", "Smash Co.", "Grill Bar"}),
             Map.entry("Pizza", new String[]{"Pizzeria", "Forno", "Pizza Evi"}),
-            Map.entry("Kebap", new String[]{"Ocakbaşı", "Kebap Salonu", "Döner Evi", "Kebapçı"}),
+            Map.entry("Türk Mutfağı", new String[]{"Ocakbaşı", "Kebap Salonu", "Döner Evi", "Kebapçı", "Pide Salonu"}),
+            Map.entry("Ev Yemeği", new String[]{"Lokantası", "Ev Yemekleri", "Esnaf Lokantası", "Sofrası"}),
             Map.entry("Sushi", new String[]{"Sushi Bar", "Sushi Han", "Omakase"}),
             Map.entry("Tatlı", new String[]{"Tatlıcı", "Pastane", "Baklavacı"}),
             Map.entry("Kahvaltı", new String[]{"Kahvaltı Evi", "Brunch Kulübü", "Kahvaltıcı"}),
@@ -407,25 +486,37 @@ public class MockDataSeeder implements CommandLineRunner {
             Map.entry("Tavuk", new String[]{"Tavukçu", "Chicken House", "Izgara Evi"}),
             Map.entry("Sandviç", new String[]{"Sandviç Dükkanı", "Tost Evi", "Büfe"}));
 
+    /**
+     * Kategori → yemekler. Her yemek yalnızca bir kategoride durur; mevcut
+     * verinin kategorisi de bu tabloya göre düzeltilir ({@link #senkronla()}).
+     * Fotoğraflar yemek adıyla eşleşir: yeni yemek eklersen
+     * {@code mock/yemek-fotograflari.json}'a da ekle.
+     */
     private static final Map<String, String[]> YEMEKLER = Map.ofEntries(
             Map.entry("Burger", new String[]{"Smash Burger", "Cheeseburger", "Double Cheddar",
                     "Tavuklu Burger", "Mantarlı Burger", "Acılı Burger", "Patates Kızartması",
-                    "Soğan Halkası", "Trüflü Patates", "Milkshake"}),
+                    "Soğan Halkası", "Trüflü Patates"}),
             Map.entry("Pizza", new String[]{"Margherita", "Pepperoni", "Dört Peynirli",
                     "Sucuklu Pizza", "Mantarlı Pizza", "Karışık Pizza", "Calzone", "Beyaz Pizza"}),
-            Map.entry("Kebap", new String[]{"Adana Kebap", "Urfa Kebap", "Kuzu Şiş", "Tavuk Şiş",
+            Map.entry("Türk Mutfağı", new String[]{"Adana Kebap", "Urfa Kebap", "Kuzu Şiş",
                     "Beyti", "İskender", "Dürüm Döner", "Ekmek Arası Döner", "Tantuni",
-                    "Patlıcan Kebabı", "Lahmacun", "Kıymalı Pide"}),
+                    "Patlıcan Kebabı", "Lahmacun", "Kıymalı Pide", "Kuşbaşılı Pide", "Çiğ Köfte",
+                    "Ali Nazik", "Hünkar Beğendi"}),
+            Map.entry("Ev Yemeği", new String[]{"Kuru Fasulye", "Pilav", "Mantı", "Karnıyarık",
+                    "Etli Nohut", "Yaprak Sarma", "Taze Fasulye", "Mercimek Çorbası",
+                    "Ezogelin Çorbası", "Biber Dolması", "Musakka", "Türlü", "Tas Kebabı",
+                    "İzmir Köfte"}),
             Map.entry("Sushi", new String[]{"Somon Nigiri", "Ton Balığı Nigiri", "California Roll",
                     "Dragon Roll", "Sashimi Tabağı", "Omakase Seti", "Gyoza", "Miso Çorbası"}),
             Map.entry("Tatlı", new String[]{"Künefe", "Fıstıklı Baklava", "Sütlaç", "Tiramisu",
-                    "Cheesecake", "Çikolatalı Sufle", "Profiterol", "Dondurma", "Magnolia"}),
+                    "Cheesecake", "Çikolatalı Sufle", "Profiterol", "Dondurma", "Magnolia",
+                    "Milkshake"}),
             Map.entry("Kahvaltı", new String[]{"Serpme Kahvaltı", "Menemen", "Sahanda Yumurta",
                     "Karışık Gözleme", "Simit Tabağı", "Avokadolu Tost", "Pancake", "Omlet"}),
             Map.entry("İtalyan", new String[]{"Carbonara", "Bolonez", "Pesto Makarna", "Risotto",
                     "Lazanya", "Bruschetta", "Caprese Salata"}),
             Map.entry("Vegan", new String[]{"Falafel Tabağı", "Buddha Bowl", "Mercimek Köftesi",
-                    "Humus", "Vegan Burger", "Kinoa Salatası", "Sebze Wrap", "Mercimek Çorbası"}),
+                    "Humus", "Vegan Burger", "Kinoa Salatası", "Sebze Wrap"}),
             Map.entry("Meze", new String[]{"Haydari", "Atom", "Fava", "Şakşuka", "Midye Dolma",
                     "Cacık", "Enginar", "Patlıcan Salatası"}),
             Map.entry("Noodle", new String[]{"Ramen", "Pad Thai", "Yakisoba", "Udon",
@@ -435,48 +526,28 @@ public class MockDataSeeder implements CommandLineRunner {
             Map.entry("Sandviç", new String[]{"Kumru", "Ayvalık Tostu", "Club Sandviç",
                     "Tavuklu Wrap", "Falafel Dürüm", "Kaşarlı Tost"}));
 
+    /** Yemek adı → kategori (YEMEKLER'in tersi). */
+    private static final Map<String, String> YEMEK_KATEGORISI = new HashMap<>();
+
+    static {
+        YEMEKLER.forEach((kategori, yemekler) -> {
+            for (String y : yemekler) {
+                String onceki = YEMEK_KATEGORISI.put(y, kategori);
+                if (onceki != null) {
+                    throw new IllegalStateException(y + " iki kategoride: " + onceki + ", " + kategori);
+                }
+            }
+        });
+    }
+
     private static final Map<String, int[]> FIYAT = Map.ofEntries(
             Map.entry("Burger", new int[]{180, 520}), Map.entry("Pizza", new int[]{200, 480}),
-            Map.entry("Kebap", new int[]{120, 550}), Map.entry("Sushi", new int[]{280, 1200}),
+            Map.entry("Türk Mutfağı", new int[]{120, 550}), Map.entry("Ev Yemeği", new int[]{90, 320}),
+            Map.entry("Sushi", new int[]{280, 1200}),
             Map.entry("Tatlı", new int[]{80, 260}), Map.entry("Kahvaltı", new int[]{90, 650}),
             Map.entry("İtalyan", new int[]{220, 560}), Map.entry("Vegan", new int[]{120, 320}),
             Map.entry("Meze", new int[]{70, 280}), Map.entry("Noodle", new int[]{200, 420}),
             Map.entry("Tavuk", new int[]{150, 380}), Map.entry("Sandviç", new int[]{80, 260}));
-
-    // Unsplash — DataSeeder'daki havuzun aynısı
-    private static final String B1 = "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=300&fit=crop";
-    private static final String B2 = "https://images.unsplash.com/photo-1553979459-d2229ba7433b?w=400&h=300&fit=crop";
-    private static final String B3 = "https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=400&h=300&fit=crop";
-    private static final String P1 = "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400&h=300&fit=crop";
-    private static final String P2 = "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=300&fit=crop";
-    private static final String S1 = "https://images.unsplash.com/photo-1617196034183-421b4040ed20?w=400&h=300&fit=crop";
-    private static final String S2 = "https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=400&h=300&fit=crop";
-    private static final String K1 = "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=400&h=300&fit=crop";
-    private static final String K2 = "https://images.unsplash.com/photo-1561651823-34feb02250e4?w=400&h=300&fit=crop";
-    private static final String TV = "https://images.unsplash.com/photo-1532550884612-72b92802ec04?w=400&h=300&fit=crop";
-    private static final String KH1 = "https://images.unsplash.com/photo-1608039829572-78524f79c4c7?w=400&h=300&fit=crop";
-    private static final String KH2 = "https://images.unsplash.com/photo-1525351484163-7529414344d8?w=400&h=300&fit=crop";
-    private static final String TT = "https://images.unsplash.com/photo-1519676867240-f03562e64548?w=400&h=300&fit=crop";
-    private static final String IT1 = "https://images.unsplash.com/photo-1612874742237-6526221588e3?w=400&h=300&fit=crop";
-    private static final String IT2 = "https://images.unsplash.com/photo-1476124369491-e7addf5db371?w=400&h=300&fit=crop";
-    private static final String ND = "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&h=300&fit=crop";
-    private static final String V1 = "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400&h=300&fit=crop";
-    private static final String V2 = "https://images.unsplash.com/photo-1547592180-85f173990554?w=400&h=300&fit=crop";
-    private static final String FR = "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=400&h=300&fit=crop";
-
-    private static final Map<String, String[]> FOTO = Map.ofEntries(
-            Map.entry("Burger", new String[]{B1, B2, B3, FR}),
-            Map.entry("Pizza", new String[]{P1, P2}),
-            Map.entry("Kebap", new String[]{K1, K2}),
-            Map.entry("Sushi", new String[]{S1, S2}),
-            Map.entry("Tatlı", new String[]{TT}),
-            Map.entry("Kahvaltı", new String[]{KH1, KH2}),
-            Map.entry("İtalyan", new String[]{IT1, IT2}),
-            Map.entry("Vegan", new String[]{V1, V2}),
-            Map.entry("Meze", new String[]{V1, S2}),
-            Map.entry("Noodle", new String[]{ND}),
-            Map.entry("Tavuk", new String[]{TV}),
-            Map.entry("Sandviç", new String[]{KH2, B1}));
 
     private static final String[] AD = {"Ahmet", "Ayşe", "Mehmet", "Elif", "Mustafa", "Zeynep",
             "Emre", "Fatma", "Burak", "Merve", "Can", "Selin", "Kerem", "Deniz", "Okan", "Ece",

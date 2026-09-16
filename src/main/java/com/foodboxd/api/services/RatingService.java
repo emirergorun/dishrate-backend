@@ -44,6 +44,7 @@ public class RatingService {
                 request.getUserId(), request.getMenuItemId(), request.getScore());
 
         validateScore(request.getScore());
+        String photoUrl = validatePhotoUrl(request.getPhotoUrl());
 
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -67,6 +68,10 @@ public class RatingService {
             log.info("Existing rating found (ID: {}). Updating...", rating.getRatingId());
             rating.setScore(request.getScore());
             rating.setComment(request.getComment());
+            // null → dokunma; boş metin → kaldır (bkz. CreateRatingRequest)
+            if (photoUrl != null) {
+                rating.setPhotoUrl(photoUrl.isEmpty() ? null : photoUrl);
+            }
             savedRating = ratingRepository.save(rating);
             log.info("Rating updated. Rating ID: {}", savedRating.getRatingId());
         } else {
@@ -76,6 +81,7 @@ public class RatingService {
                     .menuItem(menuItem)
                     .score(request.getScore())
                     .comment(request.getComment())
+                    .photoUrl(photoUrl == null || photoUrl.isEmpty() ? null : photoUrl)
                     .build();
             savedRating = ratingRepository.save(newRating);
             log.info("New rating created. Rating ID: {}", savedRating.getRatingId());
@@ -113,6 +119,7 @@ public class RatingService {
                             .mine(mine)
                             .score(r.getScore())
                             .comment(r.getComment())
+                            .photoUrl(r.getPhotoUrl())
                             .ratedAt(r.getUpdatedAt())
                             .build();
                 })
@@ -192,9 +199,28 @@ public class RatingService {
                 .setScale(2, RoundingMode.HALF_UP);
 
         menuItem.setAverageRating(average);
+        menuItem.setRatingCount((int) ratingRepository.countByMenuItem_MenuItemId(menuItem.getMenuItemId()));
         menuItemRepository.save(menuItem);
         return average;
     }
+
+    /**
+     * Yalnızca bizim `/files` uç noktamızın döndürdüğü adresler kabul edilir.
+     * Serbest bir adres, yorumu okuyan herkesin telefonuna üçüncü taraf bir
+     * sunucudan görsel indirtmek (ve onları izlemek) için kullanılabilirdi.
+     */
+    private String validatePhotoUrl(String url) {
+        if (url == null) return null;
+        String t = url.trim();
+        if (t.isEmpty()) return "";
+        if (!UPLOADED_FILE.matcher(t).matches()) {
+            throw new IllegalArgumentException("Geçersiz fotoğraf adresi.");
+        }
+        return t;
+    }
+
+    private static final java.util.regex.Pattern UPLOADED_FILE =
+            java.util.regex.Pattern.compile("^https?://[^/\\s]+/api/v1/files/[A-Za-z0-9._-]+$");
 
     // -----------------------------------------------------------------------
     // Private: Validate score range
@@ -221,6 +247,8 @@ public class RatingService {
                 .menuItemId(rating.getMenuItem().getMenuItemId())
                 .menuItemName(rating.getMenuItem().getName())
                 .photoUrl(rating.getMenuItem().getPhotoUrl())
+                .reviewPhotoUrl(rating.getPhotoUrl())
+                .restaurantId(rating.getMenuItem().getRestaurant().getRestaurantId())
                 .restaurantName(rating.getMenuItem().getRestaurant().getName())
                 .categoryName(rating.getMenuItem().getCategory() != null
                         ? rating.getMenuItem().getCategory().getName()

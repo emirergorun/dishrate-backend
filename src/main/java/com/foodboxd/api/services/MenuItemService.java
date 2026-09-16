@@ -246,6 +246,7 @@ public class MenuItemService {
                 .name(menuItem.getName())
                 .price(menuItem.getPrice())
                 .averageRating(menuItem.getAverageRating())
+                .ratingCount(menuItem.getRatingCount() == null ? 0 : menuItem.getRatingCount())
                 .photoUrl(menuItem.getPhotoUrl())
                 .restaurantId(menuItem.getRestaurant().getRestaurantId())
                 .restaurantName(menuItem.getRestaurant().getName())

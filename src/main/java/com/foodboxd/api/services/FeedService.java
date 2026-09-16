@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,9 +33,13 @@ public class FeedService {
     private final MenuItemRepository menuItemRepository;
     private final MenuItemService menuItemService;
 
-    /** Bir bölümün süzgeç ve sıralama tanımı. */
+    /**
+     * Bir bölümün süzgeç ve sıralama tanımı.
+     *
+     * @param atla sıralamanın başından atlanan kayıt sayısı
+     */
     private record Bolum(String key, List<String> kategoriler,
-                         BigDecimal enAzPuan, Sort sirala, int sayfa) {}
+                         BigDecimal enAzPuan, Sort sirala, int atla) {}
 
     private static final Sort PUANA_GORE =
             Sort.by(Sort.Direction.DESC, "averageRating").and(Sort.by(Sort.Direction.DESC, "menuItemId"));
@@ -43,17 +48,26 @@ public class FeedService {
     private static final BigDecimal SIFIR = BigDecimal.ZERO;
     private static final BigDecimal YUKSEK = BigDecimal.valueOf(4.5);
 
+    /**
+     * "Herkes denemek istiyor" en iyilerin ilk bu kadarını atlar, keşfetteki
+     * "en iyiler" şeridiyle çakışmasın.
+     *
+     * <p>Önceden bu, "ikinci sayfa" olarak tanımlıydı. Sayfa boyutu keşfette
+     * 10, "Tümünü gör"de 20 olunca ikinci sayfa iki ekranda farklı yerden
+     * başlıyordu: şeritte 11–20. sıradakiler, açılan listede 21–40.
+     * sıradakiler görünüyordu.
+     */
+    private static final int EN_IYILER_SERIDI = 10;
+
     private static final List<Bolum> BOLUMLER = List.of(
             new Bolum("top-rated", List.of(), SIFIR, PUANA_GORE, 0),
             new Bolum("weekly", List.of(), YUKSEK, YENIYE_GORE, 0),
-            // "Herkes denemek istiyor": en tepedekilerin hemen ardındakiler —
-            // aynı sıralamanın ikinci sayfası, böylece ilk bölümle çakışmaz.
-            new Bolum("most-wanted", List.of(), SIFIR, PUANA_GORE, 1),
+            new Bolum("most-wanted", List.of(), SIFIR, PUANA_GORE, EN_IYILER_SERIDI),
             new Bolum("cheat-meal",
-                    List.of("Burger", "Pizza", "Tatlı", "Kebap", "İtalyan", "Noodle", "Sandviç"),
+                    List.of("Burger", "Pizza", "Tatlı", "Türk Mutfağı", "İtalyan", "Noodle", "Sandviç"),
                     SIFIR, PUANA_GORE, 0),
             new Bolum("healthy", List.of("Vegan", "Salata", "Kahvaltı", "Meze"), SIFIR, PUANA_GORE, 0),
-            new Bolum("hidden-gems", List.of("Meze", "Noodle", "Vegan", "Tavuk"),
+            new Bolum("hidden-gems", List.of("Meze", "Noodle", "Vegan", "Tavuk", "Ev Yemeği"),
                     SIFIR, PUANA_GORE, 0));
 
     /** İlçede bu sayıdan az sonuç varsa il geneline düşülür. */
@@ -94,8 +108,8 @@ public class FeedService {
         String il = temiz(city);
         String kategori = temiz(category);
         String ilce = ilceYeterliMi(il, temiz(district), kategori) ? temiz(district) : "";
-        // Bölümün kendi başlangıç sayfası korunur: "most-wanted" ilk sayfayı atlar.
-        return sorgula(bolum, il, ilce, kategori, bolum.sayfa() + page, size)
+        long offset = bolum.atla() + (long) page * size;
+        return sorgula(bolum, il, ilce, kategori, offset, size)
                 .map(menuItemService::toResponse)
                 .toList();
     }
@@ -104,11 +118,11 @@ public class FeedService {
 
     private FeedSectionResponse bolumGetir(Bolum b, String il, String ilce,
                                            String kategori, int limit) {
-        Page<MenuItem> sayfa = sorgula(b, il, ilce, kategori, b.sayfa(), limit);
+        Page<MenuItem> sayfa = sorgula(b, il, ilce, kategori, b.atla(), limit);
         return FeedSectionResponse.builder()
                 .key(b.key())
                 .items(sayfa.map(menuItemService::toResponse).toList())
-                .hasMore(sayfa.getTotalElements() > (long) (b.sayfa() + 1) * limit)
+                .hasMore(sayfa.getTotalElements() > (long) b.atla() + limit)
                 .build();
     }
 
@@ -117,7 +131,7 @@ public class FeedService {
      * "Burger" seçiliyken "Diyet dostu" bölümü hiç sorgulanmadan boş döner.
      */
     private Page<MenuItem> sorgula(Bolum b, String il, String ilce, String kategori,
-                                   int sayfa, int boyut) {
+                                   long offset, int boyut) {
         List<String> kategoriler;
         if (kategori.isEmpty()) {
             kategoriler = b.kategoriler();
@@ -132,7 +146,7 @@ public class FeedService {
                 kategoriler.isEmpty() ? List.of("") : kategoriler,
                 kategoriler.size(),
                 b.enAzPuan(),
-                PageRequest.of(sayfa, boyut, b.sirala()));
+                new Aralik(offset, boyut, b.sirala()));
     }
 
     private boolean ilceYeterliMi(String il, String ilce, String kategori) {
@@ -147,5 +161,25 @@ public class FeedService {
     /** Sorguya "süzgeç yok" anlamında null yerine boş metin gider. */
     private static String temiz(String s) {
         return s == null ? "" : s.trim();
+    }
+
+    /**
+     * Sayfa numarası yerine doğrudan kayıt atlayan {@link Pageable}.
+     * {@link PageRequest} yalnızca sayfa boyutunun katlarını atlayabiliyor.
+     */
+    private record Aralik(long offset, int size, Sort sort) implements Pageable {
+        @Override public int getPageNumber() { return (int) (offset / size); }
+        @Override public int getPageSize() { return size; }
+        @Override public long getOffset() { return offset; }
+        @Override public Sort getSort() { return sort; }
+        @Override public Pageable next() { return new Aralik(offset + size, size, sort); }
+        @Override public Pageable previousOrFirst() {
+            return offset < size ? first() : new Aralik(offset - size, size, sort);
+        }
+        @Override public Pageable first() { return new Aralik(0, size, sort); }
+        @Override public Pageable withPage(int pageNumber) {
+            return new Aralik((long) pageNumber * size, size, sort);
+        }
+        @Override public boolean hasPrevious() { return offset > 0; }
     }
 }

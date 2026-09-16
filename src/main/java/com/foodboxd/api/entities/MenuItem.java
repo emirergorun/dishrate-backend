@@ -40,6 +40,17 @@ public class MenuItem {
     @Builder.Default
     private BigDecimal averageRating = BigDecimal.ZERO;
 
+    /**
+     * Kaç kişi puanladı. Ortalamanın yanında tutuluyor: restoran menüsünü
+     * "en çok değerlendirilen"e göre sıralamak için her yemekte ayrı sayım
+     * sorgusu atmak gerekmesin. {@code RatingService} ortalamayla birlikte
+     * günceller; kolon sonradan eklendiği için eski satırları
+     * {@code VeriGocu} doldurur.
+     */
+    @Column(name = "rating_count")
+    @Builder.Default
+    private Integer ratingCount = 0;
+
     @Column(name = "photo_url", columnDefinition = "TEXT")
     private String photoUrl;
 

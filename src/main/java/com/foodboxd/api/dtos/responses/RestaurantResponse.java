@@ -20,4 +20,10 @@ public class RestaurantResponse {
     /** Sahiplik talebine açık mı? (ownerId == null ile aynı bilgi, istemci
      *  kolaylığı için ayrıca veriliyor.) */
     private boolean claimable;
+
+    /**
+     * Restoranın türü: menüsünde en çok yemeği olan kategori (harita ikonu).
+     * Burgercide pizza da satılıyorsa çoğunluk hangisiyse o. Menü boşsa null.
+     */
+    private String categoryName;
 }

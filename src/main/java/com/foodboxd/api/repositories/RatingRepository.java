@@ -21,6 +21,8 @@ public interface RatingRepository extends JpaRepository<Rating, Long> {
 
     boolean existsByUser_UserIdAndMenuItem_MenuItemId(Long userId, Long menuItemId);
 
+    long countByMenuItem_MenuItemId(Long menuItemId);
+
     @Query("SELECT AVG(r.score) FROM Rating r WHERE r.menuItem.menuItemId = :menuItemId")
     Optional<BigDecimal> calculateAverageScoreByMenuItemId(@Param("menuItemId") Long menuItemId);
 }

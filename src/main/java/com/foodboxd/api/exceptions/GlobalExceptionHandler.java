@@ -222,6 +222,20 @@ public class GlobalExceptionHandler {
     }
 
     // -----------------------------------------------------------------------
+    // Invalid Argument (400)
+    // -----------------------------------------------------------------------
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
+        log.warn("Invalid argument: {}", ex.getMessage());
+        ErrorResponse errorResponse = new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                "Bad Request",
+                ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    // -----------------------------------------------------------------------
     // Generic Server Error (500)
     // -----------------------------------------------------------------------
     @ExceptionHandler(Exception.class)

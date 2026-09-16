@@ -29,6 +29,49 @@ public interface MenuItemRepository extends JpaRepository<MenuItem, Long> {
     List<MenuItem> findByNameContainingIgnoreCase(String name);
 
     /**
+     * Arama ekranı: yemek adı, restoran adı ya da kategori adı eşleşen
+     * yemekler, en yüksek puanlı önce. Türkçe karakter ve harf büyüklüğü
+     * yok sayılır (bkz. {@code AramaMetni}).
+     *
+     * <p>Önceden yalnızca yemek adına bakılıyordu: "Beto" yazınca Beto
+     * Burger'ın hiçbir yemeğinin adında "beto" geçmediği için sonuç çıkmıyordu.
+     */
+    @Query(value = """
+            SELECT mi.* FROM menu_items mi
+              JOIN restaurants r ON r.restaurant_id = mi.restaurant_id
+              LEFT JOIN categories c ON c.category_id = mi.category_id
+            WHERE lower(translate(mi.name, :kaynak, :hedef)) LIKE :kalip
+               OR lower(translate(r.name, :kaynak, :hedef)) LIKE :kalip
+               OR lower(translate(coalesce(c.name, ''), :kaynak, :hedef)) LIKE :kalip
+            ORDER BY mi.average_rating DESC, mi.menu_item_id DESC
+            LIMIT :enFazla
+            """, nativeQuery = true)
+    List<MenuItem> search(@Param("kalip") String kalip,
+                          @Param("kaynak") String kaynak,
+                          @Param("hedef") String hedef,
+                          @Param("enFazla") int enFazla);
+
+    /** Restoran başına kategori sayıları: [restaurantId, kategori adı, adet]. */
+    @Query("""
+            SELECT mi.restaurant.restaurantId, c.name, COUNT(mi)
+            FROM MenuItem mi JOIN mi.category c
+            GROUP BY mi.restaurant.restaurantId, c.name
+            """)
+    List<Object[]> countCategoriesPerRestaurant();
+
+    /** Tek restoranın kategori sayıları: [kategori adı, adet]. */
+    @Query("""
+            SELECT c.name, COUNT(mi)
+            FROM MenuItem mi JOIN mi.category c
+            WHERE mi.restaurant.restaurantId = :restaurantId
+            GROUP BY c.name
+            """)
+    List<Object[]> countCategoriesOfRestaurant(@Param("restaurantId") Long restaurantId);
+
+    @Query("SELECT mi FROM MenuItem mi JOIN FETCH mi.restaurant r WHERE r.seedTag = :etiket")
+    List<MenuItem> findBySeedTag(@Param("etiket") String etiket);
+
+    /**
      * Keşfet bölümlerinin tek sorgusu: konuma ve kategoriye göre süzer,
      * sıralama ve sayfa boyutu {@link Pageable} ile verilir.
      *

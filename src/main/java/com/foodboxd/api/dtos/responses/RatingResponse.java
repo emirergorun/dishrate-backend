@@ -17,7 +17,11 @@ public class RatingResponse {
     private String username;
     private Long menuItemId;
     private String menuItemName;
+    /** Yemeğin kendi fotoğrafı. */
     private String photoUrl;
+    /** Kullanıcının değerlendirmeye eklediği fotoğraf (varsa). */
+    private String reviewPhotoUrl;
+    private Long restaurantId;
     private String restaurantName;
     private String categoryName;
     private BigDecimal score;

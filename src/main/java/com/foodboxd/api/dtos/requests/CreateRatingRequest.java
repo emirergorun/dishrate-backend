@@ -3,6 +3,7 @@ package com.foodboxd.api.dtos.requests;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -24,4 +25,12 @@ public class CreateRatingRequest {
     private BigDecimal score;
 
     private String comment;
+
+    /**
+     * İsteğe bağlı fotoğraf. {@code null} → güncellemede mevcut fotoğraf
+     * korunur (günlükten yalnızca puanı düzenlemek fotoğrafı silmesin);
+     * boş metin → fotoğraf kaldırılır.
+     */
+    @Size(max = 500, message = "Fotoğraf adresi çok uzun")
+    private String photoUrl;
 }

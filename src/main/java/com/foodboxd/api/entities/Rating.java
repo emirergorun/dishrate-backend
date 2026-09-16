@@ -38,6 +38,10 @@ public class Rating {
     @Column(name = "comment", columnDefinition = "TEXT")
     private String comment;
 
+    /** Değerlendirmeye eklenen isteğe bağlı fotoğraf (`/files` üzerinden yüklenmiş). */
+    @Column(name = "photo_url", columnDefinition = "TEXT")
+    private String photoUrl;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
