@@ -42,3 +42,6 @@ Thumbs.db
 
 # Yüklenen görseller (yerel geliştirme deposu)
 uploads/
+
+# Claude Code proje notları (yerel, GitHub’a gitmez)
+CLAUDE.md

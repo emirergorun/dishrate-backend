@@ -1,5 +1,6 @@
 package com.foodboxd.api.controllers;
 
+import com.foodboxd.api.security.Yetki;
 import com.foodboxd.api.dtos.requests.CreateRatingRequest;
 import com.foodboxd.api.dtos.responses.MenuItemReviewResponse;
 import com.foodboxd.api.dtos.responses.RatingResponse;
@@ -28,7 +29,10 @@ public class RatingController {
      * The menu item's average_rating is recalculated automatically after every operation.
      */
     @PostMapping
-    public ResponseEntity<RatingResponse> upsertRating(@Valid @RequestBody CreateRatingRequest request) {
+    public ResponseEntity<RatingResponse> upsertRating(
+            @Valid @RequestBody CreateRatingRequest request,
+            @AuthenticationPrincipal User currentUser) {
+        Yetki.kendisi(currentUser, request.getUserId());
         RatingResponse response = ratingService.upsertRating(request);
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
@@ -49,7 +53,10 @@ public class RatingController {
      * Returns all ratings submitted by a given user.
      */
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<RatingResponse>> getRatingsByUser(@PathVariable Long userId) {
+    public ResponseEntity<List<RatingResponse>> getRatingsByUser(
+            @PathVariable Long userId,
+            @AuthenticationPrincipal User currentUser) {
+        Yetki.kendisi(currentUser, userId);
         return ResponseEntity.ok(ratingService.getRatingsByUser(userId));
     }
 
@@ -58,8 +65,10 @@ public class RatingController {
      * Deletes a rating and recalculates the menu item's average.
      */
     @DeleteMapping("/{ratingId}")
-    public ResponseEntity<Void> deleteRating(@PathVariable Long ratingId) {
-        ratingService.deleteRating(ratingId);
+    public ResponseEntity<Void> deleteRating(
+            @PathVariable Long ratingId,
+            @AuthenticationPrincipal User currentUser) {
+        ratingService.deleteRating(ratingId, currentUser);
         return ResponseEntity.noContent().build();
     }
 }

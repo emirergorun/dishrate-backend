@@ -4,6 +4,7 @@ import com.foodboxd.api.entities.Rating;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
@@ -25,4 +26,9 @@ public interface RatingRepository extends JpaRepository<Rating, Long> {
 
     @Query("SELECT AVG(r.score) FROM Rating r WHERE r.menuItem.menuItemId = :menuItemId")
     Optional<BigDecimal> calculateAverageScoreByMenuItemId(@Param("menuItemId") Long menuItemId);
+
+    /** Hesap silme: kullanıcının bütün kayıtları tek sorguda. */
+    @Modifying(flushAutomatically = true)
+    @Query("DELETE FROM Rating r WHERE r.user.userId = :userId")
+    void deleteAllOfUser(@Param("userId") Long userId);
 }

@@ -1,5 +1,6 @@
 package com.foodboxd.api.services;
 
+import com.foodboxd.api.security.Yetki;
 import com.foodboxd.api.dtos.requests.CreateWishlistItemRequest;
 import com.foodboxd.api.dtos.responses.WishlistItemResponse;
 import com.foodboxd.api.entities.MenuItem;
@@ -84,13 +85,13 @@ public class WishlistService {
     // Remove from wishlist by wish ID
     // -----------------------------------------------------------------------
     @Transactional
-    public void removeFromWishlist(Long wishId) {
+    public void removeFromWishlist(Long wishId, User currentUser) {
         log.info("Remove from wishlist request. Wish ID: {}", wishId);
-        if (!wishlistItemRepository.existsById(wishId)) {
-            throw new ResourceNotFoundException(
-                    "Wishlist item not found. ID: " + wishId
-            );
-        }
+        WishlistItem item = wishlistItemRepository.findById(wishId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Wishlist item not found. ID: " + wishId
+                ));
+        Yetki.kendisi(currentUser, item.getUser().getUserId());
         wishlistItemRepository.deleteById(wishId);
         log.info("Item removed from wishlist. Wish ID: {}", wishId);
     }

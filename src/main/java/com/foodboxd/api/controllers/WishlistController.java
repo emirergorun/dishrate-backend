@@ -1,5 +1,8 @@
 package com.foodboxd.api.controllers;
 
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import com.foodboxd.api.entities.User;
+import com.foodboxd.api.security.Yetki;
 import com.foodboxd.api.dtos.requests.CreateWishlistItemRequest;
 import com.foodboxd.api.dtos.responses.WishlistItemResponse;
 import com.foodboxd.api.services.WishlistService;
@@ -24,7 +27,9 @@ public class WishlistController {
      */
     @PostMapping
     public ResponseEntity<WishlistItemResponse> addToWishlist(
-            @Valid @RequestBody CreateWishlistItemRequest request) {
+            @Valid @RequestBody CreateWishlistItemRequest request,
+            @AuthenticationPrincipal User currentUser) {
+        Yetki.kendisi(currentUser, request.getUserId());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(wishlistService.addToWishlist(request));
     }
@@ -34,7 +39,10 @@ public class WishlistController {
      * Returns the wishlist for a given user.
      */
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<WishlistItemResponse>> getWishlistByUser(@PathVariable Long userId) {
+    public ResponseEntity<List<WishlistItemResponse>> getWishlistByUser(
+            @PathVariable Long userId,
+            @AuthenticationPrincipal User currentUser) {
+        Yetki.kendisi(currentUser, userId);
         return ResponseEntity.ok(wishlistService.getWishlistByUser(userId));
     }
 
@@ -43,8 +51,10 @@ public class WishlistController {
      * Removes a wishlist item by its ID.
      */
     @DeleteMapping("/{wishId}")
-    public ResponseEntity<Void> removeFromWishlist(@PathVariable Long wishId) {
-        wishlistService.removeFromWishlist(wishId);
+    public ResponseEntity<Void> removeFromWishlist(
+            @PathVariable Long wishId,
+            @AuthenticationPrincipal User currentUser) {
+        wishlistService.removeFromWishlist(wishId, currentUser);
         return ResponseEntity.noContent().build();
     }
 
@@ -55,7 +65,9 @@ public class WishlistController {
     @DeleteMapping("/user/{userId}/menu-item/{menuItemId}")
     public ResponseEntity<Void> removeFromWishlistByItem(
             @PathVariable Long userId,
-            @PathVariable Long menuItemId) {
+            @PathVariable Long menuItemId,
+            @AuthenticationPrincipal User currentUser) {
+        Yetki.kendisi(currentUser, userId);
         wishlistService.removeFromWishlistByItem(userId, menuItemId);
         return ResponseEntity.noContent().build();
     }

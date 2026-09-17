@@ -2,6 +2,9 @@ package com.foodboxd.api.repositories;
 
 import com.foodboxd.api.entities.WishlistItem;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -17,4 +20,9 @@ public interface WishlistItemRepository extends JpaRepository<WishlistItem, Long
     boolean existsByUser_UserIdAndMenuItem_MenuItemId(Long userId, Long menuItemId);
 
     void deleteByUser_UserIdAndMenuItem_MenuItemId(Long userId, Long menuItemId);
+
+    /** Hesap silme: kullanıcının bütün kayıtları tek sorguda. */
+    @Modifying
+    @Query("DELETE FROM WishlistItem w WHERE w.user.userId = :userId")
+    void deleteAllOfUser(@Param("userId") Long userId);
 }

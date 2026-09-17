@@ -37,6 +37,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/files/**").permitAll()
                         // Sadece admin
                         .requestMatchers("/admin/**").hasRole("ADMIN")
+                        // Katalog (restoran, adres, kategori) oluşturmak yalnızca admin işi;
+                        // önceden giriş yapmış herkes restoran ekleyebiliyordu.
+                        .requestMatchers(HttpMethod.POST,
+                                "/restaurants", "/restaurants/addresses", "/menu-items/categories")
+                        .hasRole("ADMIN")
                         // Geri kalanı: giriş yapmış herkes
                         .anyRequest().authenticated()
                 )

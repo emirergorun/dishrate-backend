@@ -1,5 +1,6 @@
 package com.foodboxd.api.services;
 
+import com.foodboxd.api.security.Yetki;
 import com.foodboxd.api.dtos.requests.CreateRatingRequest;
 import com.foodboxd.api.dtos.responses.MenuItemReviewResponse;
 import com.foodboxd.api.dtos.responses.RatingResponse;
@@ -174,12 +175,13 @@ public class RatingService {
     // Delete a rating
     // -----------------------------------------------------------------------
     @Transactional
-    public void deleteRating(Long ratingId) {
+    public void deleteRating(Long ratingId, User currentUser) {
         log.info("Delete rating request. ID: {}", ratingId);
         Rating rating = ratingRepository.findById(ratingId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Rating not found. ID: " + ratingId
                 ));
+        Yetki.kendisi(currentUser, rating.getUser().getUserId());
 
         MenuItem menuItem = rating.getMenuItem();
         ratingRepository.deleteById(ratingId);
@@ -192,6 +194,12 @@ public class RatingService {
     // -----------------------------------------------------------------------
     // Private: Recalculate and persist average rating
     // -----------------------------------------------------------------------
+    /** Hesap silme gibi toplu işlemlerden sonra ortalama ve sayıyı tazeler. */
+    @Transactional
+    public void recalculateAverages(java.util.Collection<MenuItem> menuItems) {
+        menuItems.forEach(this::recalculateAverage);
+    }
+
     private BigDecimal recalculateAverage(MenuItem menuItem) {
         BigDecimal average = ratingRepository
                 .calculateAverageScoreByMenuItemId(menuItem.getMenuItemId())

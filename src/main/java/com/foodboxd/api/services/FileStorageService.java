@@ -14,6 +14,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.UUID;
 
 /**
@@ -77,6 +79,29 @@ public class FileStorageService {
         }
         return new FileSystemResource(path);
     }
+
+    /**
+     * Bizim `/files` adresimizi gösteren bir URL'nin dosyasını siler. Başka
+     * adresler (sahte verideki Wikimedia görselleri gibi) ve bulunamayan
+     * dosyalar sessizce atlanır; silme hatası çağıranın işini bozmaz.
+     */
+    public void deleteByUrl(String url) {
+        if (url == null) return;
+        Matcher m = BIZIM_DOSYA.matcher(url.trim());
+        if (!m.matches()) return;
+        Path path = root.resolve(m.group(1)).normalize();
+        if (!path.startsWith(root)) return;
+        try {
+            if (Files.deleteIfExists(path)) {
+                log.info("Görsel silindi: {}", m.group(1));
+            }
+        } catch (IOException e) {
+            log.warn("Görsel silinemedi: {} ({})", m.group(1), e.getMessage());
+        }
+    }
+
+    private static final Pattern BIZIM_DOSYA =
+            Pattern.compile("^https?://[^/\\s]+/api/v1/files/([A-Za-z0-9._-]+)$");
 
     public String contentTypeOf(String filename) {
         String f = filename.toLowerCase();

@@ -94,18 +94,6 @@ public class UserService {
     }
 
     // -----------------------------------------------------------------------
-    // Get all users
-    // -----------------------------------------------------------------------
-    @Transactional(readOnly = true)
-    public List<UserResponse> getAllUsers() {
-        log.debug("Fetching all users.");
-        return userRepository.findAll()
-                .stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
-    }
-
-    // -----------------------------------------------------------------------
     // Update user profile
     // -----------------------------------------------------------------------
     @Transactional
@@ -172,21 +160,6 @@ public class UserService {
         User saved = userRepository.save(user);
         log.info("User updated successfully. ID: {}", userId);
         return toResponse(saved);
-    }
-
-    // -----------------------------------------------------------------------
-    // Delete a user
-    // -----------------------------------------------------------------------
-    @Transactional
-    public void deleteUser(Long userId) {
-        log.info("Delete user request. ID: {}", userId);
-        if (!userRepository.existsById(userId)) {
-            throw new ResourceNotFoundException(
-                    "User not found for deletion. ID: " + userId
-            );
-        }
-        userRepository.deleteById(userId);
-        log.info("User deleted successfully. ID: {}", userId);
     }
 
     // -----------------------------------------------------------------------
