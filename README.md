@@ -1,7 +1,7 @@
 # Dishrate — Backend API
 
 Restoranları değil, **tek tek yemekleri** puanlayan bir mobil uygulamanın REST API'si.
-"Bu restoran 4 yıldız" yerine "X'teki cheeseburger 4.5" — yemek için Letterboxd mantığı.
+"Bu restoran 4 yıldız" yerine "X'teki cheeseburger 4.5" şeklinde puanlamayı restorana göre değil, yemek özelinde yapmayı sağlar.
 
 Bu depo backend'dir. Mobil uygulama: [dishrate-mobile](https://github.com/emirergorun/dishrate-mobile)
 
