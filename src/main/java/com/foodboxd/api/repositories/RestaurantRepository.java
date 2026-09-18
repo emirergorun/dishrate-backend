@@ -16,18 +16,18 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, Long> {
 
     /**
      * Türkçe karakter ve harf büyüklüğünden bağımsız ad araması
-     * (bkz. {@code AramaMetni}). "beto", "BETO" ve "Betö" aynı restoranı bulur.
+     * (bkz. {@code SearchText}). "beto", "BETO" ve "Betö" aynı restoranı bulur.
      */
     @Query(value = """
             SELECT r.* FROM restaurants r
-            WHERE lower(translate(r.name, :kaynak, :hedef)) LIKE :kalip
+            WHERE lower(translate(r.name, :source, :target)) LIKE :pattern
             ORDER BY r.name
-            LIMIT :enFazla
+            LIMIT :maxResults
             """, nativeQuery = true)
-    List<Restaurant> searchByNormalizedName(@Param("kalip") String kalip,
-                                            @Param("kaynak") String kaynak,
-                                            @Param("hedef") String hedef,
-                                            @Param("enFazla") int enFazla);
+    List<Restaurant> searchByNormalizedName(@Param("pattern") String pattern,
+                                            @Param("source") String source,
+                                            @Param("target") String target,
+                                            @Param("maxResults") int maxResults);
 
     List<Restaurant> findByAddress_City(String city);
 

@@ -7,26 +7,26 @@ import java.util.Locale;
  * "sisli", "ŞİŞLİ" ve "Şişli" aynı şeyi bulur.
  *
  * <p>Aynı dönüşüm hem sorgu metnine (Java) hem kolona (SQL {@code translate})
- * uygulanır; ikisi {@link #KAYNAK} / {@link #HEDEF} çiftini paylaştığı için
+ * uygulanır; ikisi {@link #SOURCE_CHARS} / {@link #TARGET_CHARS} çiftini paylaştığı için
  * birbirinden sapamaz.
  *
  * <p>{@code translate} önce çalışır, {@code lower} sonra: Postgres'te
  * {@code lower('İ')} yerel ayara göre "i̇" (i + birleşik nokta) verebiliyor.
  */
-public final class AramaMetni {
+public final class SearchText {
 
-    private AramaMetni() {}
+    private SearchText() {}
 
-    public static final String KAYNAK = "ÇĞİIÖŞÜÂÎÛçğıöşüâîû";
-    public static final String HEDEF = "cgiiosuaiucgiosuaiu";
+    public static final String SOURCE_CHARS = "ÇĞİIÖŞÜÂÎÛçğıöşüâîû";
+    public static final String TARGET_CHARS = "cgiiosuaiucgiosuaiu";
 
     /** "  Beşiktaş  Köfte " → "besiktas kofte" */
-    public static String normalize(String metin) {
-        if (metin == null) return "";
-        StringBuilder sb = new StringBuilder(metin.length());
-        for (char c : metin.trim().toCharArray()) {
-            int i = KAYNAK.indexOf(c);
-            sb.append(i >= 0 ? HEDEF.charAt(i) : Character.toLowerCase(c));
+    public static String normalize(String text) {
+        if (text == null) return "";
+        StringBuilder sb = new StringBuilder(text.length());
+        for (char c : text.trim().toCharArray()) {
+            int i = SOURCE_CHARS.indexOf(c);
+            sb.append(i >= 0 ? TARGET_CHARS.charAt(i) : Character.toLowerCase(c));
         }
         return sb.toString()
                 .toLowerCase(Locale.ROOT)
@@ -35,7 +35,7 @@ public final class AramaMetni {
     }
 
     /** {@code LIKE} için "%metin%" kalıbı. */
-    public static String icerir(String metin) {
-        return "%" + normalize(metin) + "%";
+    public static String containsPattern(String text) {
+        return "%" + normalize(text) + "%";
     }
 }

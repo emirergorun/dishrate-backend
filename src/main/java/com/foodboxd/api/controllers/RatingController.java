@@ -1,6 +1,6 @@
 package com.foodboxd.api.controllers;
 
-import com.foodboxd.api.security.Yetki;
+import com.foodboxd.api.security.Ownership;
 import com.foodboxd.api.dtos.requests.CreateRatingRequest;
 import com.foodboxd.api.dtos.responses.MenuItemReviewResponse;
 import com.foodboxd.api.dtos.responses.RatingResponse;
@@ -32,7 +32,7 @@ public class RatingController {
     public ResponseEntity<RatingResponse> upsertRating(
             @Valid @RequestBody CreateRatingRequest request,
             @AuthenticationPrincipal User currentUser) {
-        Yetki.kendisi(currentUser, request.getUserId());
+        Ownership.requireSelf(currentUser, request.getUserId());
         RatingResponse response = ratingService.upsertRating(request);
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
@@ -56,7 +56,7 @@ public class RatingController {
     public ResponseEntity<List<RatingResponse>> getRatingsByUser(
             @PathVariable Long userId,
             @AuthenticationPrincipal User currentUser) {
-        Yetki.kendisi(currentUser, userId);
+        Ownership.requireSelf(currentUser, userId);
         return ResponseEntity.ok(ratingService.getRatingsByUser(userId));
     }
 

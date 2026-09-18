@@ -41,8 +41,8 @@ public class MenuItemController {
             @RequestParam(required = false) String district,
             @RequestParam(required = false) String category,
             @RequestParam(defaultValue = "10") int limit) {
-        int guvenliLimit = Math.min(Math.max(limit, 1), 30);
-        return ResponseEntity.ok(feedService.feed(city, district, category, guvenliLimit));
+        int safeLimit = Math.min(Math.max(limit, 1), 30);
+        return ResponseEntity.ok(feedService.feed(city, district, category, safeLimit));
     }
 
     /**
@@ -57,9 +57,9 @@ public class MenuItemController {
             @RequestParam(required = false) String category,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        int guvenliBoyut = Math.min(Math.max(size, 1), 50);
+        int safeSize = Math.min(Math.max(size, 1), 50);
         return ResponseEntity.ok(feedService.section(
-                key, city, district, category, Math.max(page, 0), guvenliBoyut));
+                key, city, district, category, Math.max(page, 0), safeSize));
     }
 
     /**

@@ -26,70 +26,70 @@ import java.util.Optional;
 @Order(3)
 @Component
 @RequiredArgsConstructor
-public class VeriGocu implements CommandLineRunner {
+public class DataMigrator implements CommandLineRunner {
 
     private final CategoryRepository categoryRepository;
     private final EntityManager entityManager;
-    private final YemekFotograflari fotograflar;
+    private final DishPhotos photos;
 
     /** 404 dönmeye başlayan eski Unsplash adresleri → yerine fotoğrafı konacak yemek. */
-    private static final Map<String, String> KIRIK_FOTOGRAFLAR = Map.of(
+    private static final Map<String, String> BROKEN_PHOTOS = Map.of(
             "https://images.unsplash.com/photo-1532550884612-72b92802ec04?w=400&h=300&fit=crop", "Izgara Tavuk",
             "https://images.unsplash.com/photo-1617196034183-421b4040ed20?w=400&h=300&fit=crop", "Somon Nigiri");
 
     @Override
     @Transactional
     public void run(String... args) {
-        kebapKategorisiniTasi();
-        for (String ad : List.of("Türk Mutfağı", "Ev Yemeği")) {
-            if (!categoryRepository.existsByName(ad)) {
-                categoryRepository.save(Category.builder().name(ad).build());
-                log.info("Veri göçü: '{}' kategorisi eklendi.", ad);
+        migrateKebabCategory();
+        for (String name : List.of("Türk Mutfağı", "Ev Yemeği")) {
+            if (!categoryRepository.existsByName(name)) {
+                categoryRepository.save(Category.builder().name(name).build());
+                log.info("Veri göçü: '{}' kategorisi eklendi.", name);
             }
         }
-        kirikFotograflariDegistir();
-        puanSayilariniDoldur();
+        replaceBrokenPhotos();
+        backfillRatingCounts();
     }
 
     /**
      * "Kebap" kategorisi "Türk Mutfağı" oldu: lahmacun, pide ve tantuni de
      * kebap sayılıyordu.
      */
-    private void kebapKategorisiniTasi() {
-        Optional<Category> kebap = categoryRepository.findByName("Kebap");
-        if (kebap.isEmpty()) return;
+    private void migrateKebabCategory() {
+        Optional<Category> kebab = categoryRepository.findByName("Kebap");
+        if (kebab.isEmpty()) return;
 
-        Optional<Category> turk = categoryRepository.findByName("Türk Mutfağı");
-        if (turk.isEmpty()) {
-            kebap.get().setName("Türk Mutfağı");
-            categoryRepository.save(kebap.get());
+        Optional<Category> turkish = categoryRepository.findByName("Türk Mutfağı");
+        if (turkish.isEmpty()) {
+            kebab.get().setName("Türk Mutfağı");
+            categoryRepository.save(kebab.get());
             log.info("Veri göçü: 'Kebap' kategorisi 'Türk Mutfağı' olarak yeniden adlandırıldı.");
             return;
         }
-        int tasinan = entityManager.createNativeQuery(
-                        "UPDATE menu_items SET category_id = :yeni WHERE category_id = :eski")
-                .setParameter("yeni", turk.get().getCategoryId())
-                .setParameter("eski", kebap.get().getCategoryId())
+        int moved = entityManager.createNativeQuery(
+                        "UPDATE menu_items SET category_id = :newValue WHERE category_id = :oldValue")
+                .setParameter("newValue", turkish.get().getCategoryId())
+                .setParameter("oldValue", kebab.get().getCategoryId())
                 .executeUpdate();
-        categoryRepository.delete(kebap.get());
-        log.info("Veri göçü: {} yemek 'Kebap'tan 'Türk Mutfağı'na taşındı.", tasinan);
+        categoryRepository.delete(kebab.get());
+        log.info("Veri göçü: {} yemek 'Kebap'tan 'Türk Mutfağı'na taşındı.", moved);
     }
 
-    private void kirikFotograflariDegistir() {
-        KIRIK_FOTOGRAFLAR.forEach((eski, yemek) -> {
-            String yeni = fotograflar.sec(yemek, 0);
-            if (yeni == null) return;
+    private void replaceBrokenPhotos() {
+        BROKEN_PHOTOS.forEach((old, dish) -> {
+            String fresh = photos.pick(dish, 0);
+            if (fresh == null) return;
             int n = entityManager.createNativeQuery(
-                            "UPDATE menu_items SET photo_url = :yeni WHERE photo_url = :eski")
-                    .setParameter("yeni", yeni)
-                    .setParameter("eski", eski)
+                            "UPDATE menu_items SET photo_url = :newValue WHERE photo_url = :oldValue")
+                    .setParameter("newValue", fresh)
+                    .setParameter("oldValue", old)
                     .executeUpdate();
             if (n > 0) log.info("Veri göçü: {} yemeğin kırık fotoğrafı değiştirildi.", n);
         });
     }
 
     /** {@code rating_count} kolonu sonradan eklendi; eski satırlarda boş. */
-    private void puanSayilariniDoldur() {
+    private void backfillRatingCounts() {
         int n = entityManager.createNativeQuery("""
                 UPDATE menu_items m
                    SET rating_count = (SELECT COUNT(*) FROM ratings r

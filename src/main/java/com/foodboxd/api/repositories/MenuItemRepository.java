@@ -31,7 +31,7 @@ public interface MenuItemRepository extends JpaRepository<MenuItem, Long> {
     /**
      * Arama ekranı: yemek adı, restoran adı ya da kategori adı eşleşen
      * yemekler, en yüksek puanlı önce. Türkçe karakter ve harf büyüklüğü
-     * yok sayılır (bkz. {@code AramaMetni}).
+     * yok sayılır (bkz. {@code SearchText}).
      *
      * <p>Önceden yalnızca yemek adına bakılıyordu: "Beto" yazınca Beto
      * Burger'ın hiçbir yemeğinin adında "beto" geçmediği için sonuç çıkmıyordu.
@@ -40,16 +40,16 @@ public interface MenuItemRepository extends JpaRepository<MenuItem, Long> {
             SELECT mi.* FROM menu_items mi
               JOIN restaurants r ON r.restaurant_id = mi.restaurant_id
               LEFT JOIN categories c ON c.category_id = mi.category_id
-            WHERE lower(translate(mi.name, :kaynak, :hedef)) LIKE :kalip
-               OR lower(translate(r.name, :kaynak, :hedef)) LIKE :kalip
-               OR lower(translate(coalesce(c.name, ''), :kaynak, :hedef)) LIKE :kalip
+            WHERE lower(translate(mi.name, :source, :target)) LIKE :pattern
+               OR lower(translate(r.name, :source, :target)) LIKE :pattern
+               OR lower(translate(coalesce(c.name, ''), :source, :target)) LIKE :pattern
             ORDER BY mi.average_rating DESC, mi.menu_item_id DESC
-            LIMIT :enFazla
+            LIMIT :maxResults
             """, nativeQuery = true)
-    List<MenuItem> search(@Param("kalip") String kalip,
-                          @Param("kaynak") String kaynak,
-                          @Param("hedef") String hedef,
-                          @Param("enFazla") int enFazla);
+    List<MenuItem> search(@Param("pattern") String pattern,
+                          @Param("source") String source,
+                          @Param("target") String target,
+                          @Param("maxResults") int maxResults);
 
     /** Restoran başına kategori sayıları: [restaurantId, kategori adı, adet]. */
     @Query("""
@@ -68,8 +68,8 @@ public interface MenuItemRepository extends JpaRepository<MenuItem, Long> {
             """)
     List<Object[]> countCategoriesOfRestaurant(@Param("restaurantId") Long restaurantId);
 
-    @Query("SELECT mi FROM MenuItem mi JOIN FETCH mi.restaurant r WHERE r.seedTag = :etiket")
-    List<MenuItem> findBySeedTag(@Param("etiket") String etiket);
+    @Query("SELECT mi FROM MenuItem mi JOIN FETCH mi.restaurant r WHERE r.seedTag = :tag")
+    List<MenuItem> findBySeedTag(@Param("tag") String tag);
 
     /**
      * Keşfet bölümlerinin tek sorgusu: konuma ve kategoriye göre süzer,

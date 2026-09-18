@@ -13,7 +13,7 @@ import java.util.Map;
 
 /**
  * Sahte veride yemek adına göre fotoğraf havuzu
- * ({@code resources/mock/yemek-fotograflari.json}).
+ * ({@code resources/mock/dish-photos.json}).
  *
  * <p>Görseller Wikimedia Commons'tan, her yemek için elle seçildi; aynı
  * yemeğin farklı restoranlarda farklı fotoğrafı olsun diye çoğunda birden
@@ -22,32 +22,32 @@ import java.util.Map;
  */
 @Slf4j
 @Component
-public class YemekFotograflari {
+public class DishPhotos {
 
-    private final Map<String, List<String>> havuz;
+    private final Map<String, List<String>> pool;
 
-    public YemekFotograflari(ObjectMapper objectMapper) {
-        Map<String, List<String>> okunan;
-        try (InputStream in = new ClassPathResource("mock/yemek-fotograflari.json").getInputStream()) {
-            okunan = objectMapper.readValue(in, new TypeReference<>() {});
+    public DishPhotos(ObjectMapper objectMapper) {
+        Map<String, List<String>> loaded;
+        try (InputStream in = new ClassPathResource("mock/dish-photos.json").getInputStream()) {
+            loaded = objectMapper.readValue(in, new TypeReference<>() {});
         } catch (IOException e) {
             log.warn("Yemek fotoğrafı havuzu okunamadı: {}", e.getMessage());
-            okunan = Map.of();
+            loaded = Map.of();
         }
-        this.havuz = okunan;
+        this.pool = loaded;
     }
 
     /** Yemeğin fotoğrafları; tanınmayan yemekte boş liste. */
-    public List<String> fotolar(String yemek) {
-        return havuz.getOrDefault(yemek, List.of());
+    public List<String> photos(String dish) {
+        return pool.getOrDefault(dish, List.of());
     }
 
     /**
      * Anahtara göre sabit bir fotoğraf seçer — aynı yemek aynı anahtarla hep
      * aynı fotoğrafı alır, farklı restoranlar farklı fotoğraf alır.
      */
-    public String sec(String yemek, long anahtar) {
-        List<String> l = fotolar(yemek);
-        return l.isEmpty() ? null : l.get((int) Math.floorMod(anahtar, (long) l.size()));
+    public String pick(String dish, long key) {
+        List<String> l = photos(dish);
+        return l.isEmpty() ? null : l.get((int) Math.floorMod(key, (long) l.size()));
     }
 }

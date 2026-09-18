@@ -2,7 +2,7 @@ package com.foodboxd.api.controllers;
 
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import com.foodboxd.api.entities.User;
-import com.foodboxd.api.security.Yetki;
+import com.foodboxd.api.security.Ownership;
 import com.foodboxd.api.dtos.requests.CreateWishlistItemRequest;
 import com.foodboxd.api.dtos.responses.WishlistItemResponse;
 import com.foodboxd.api.services.WishlistService;
@@ -29,7 +29,7 @@ public class WishlistController {
     public ResponseEntity<WishlistItemResponse> addToWishlist(
             @Valid @RequestBody CreateWishlistItemRequest request,
             @AuthenticationPrincipal User currentUser) {
-        Yetki.kendisi(currentUser, request.getUserId());
+        Ownership.requireSelf(currentUser, request.getUserId());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(wishlistService.addToWishlist(request));
     }
@@ -42,7 +42,7 @@ public class WishlistController {
     public ResponseEntity<List<WishlistItemResponse>> getWishlistByUser(
             @PathVariable Long userId,
             @AuthenticationPrincipal User currentUser) {
-        Yetki.kendisi(currentUser, userId);
+        Ownership.requireSelf(currentUser, userId);
         return ResponseEntity.ok(wishlistService.getWishlistByUser(userId));
     }
 
@@ -67,7 +67,7 @@ public class WishlistController {
             @PathVariable Long userId,
             @PathVariable Long menuItemId,
             @AuthenticationPrincipal User currentUser) {
-        Yetki.kendisi(currentUser, userId);
+        Ownership.requireSelf(currentUser, userId);
         wishlistService.removeFromWishlistByItem(userId, menuItemId);
         return ResponseEntity.noContent().build();
     }

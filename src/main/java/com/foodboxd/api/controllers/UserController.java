@@ -5,7 +5,7 @@ import com.foodboxd.api.dtos.requests.DeleteAccountRequest;
 import com.foodboxd.api.dtos.requests.UpdateUserRequest;
 import com.foodboxd.api.dtos.responses.UserResponse;
 import com.foodboxd.api.entities.User;
-import com.foodboxd.api.security.Yetki;
+import com.foodboxd.api.security.Ownership;
 import com.foodboxd.api.services.AccountDeletionService;
 import com.foodboxd.api.services.UserService;
 import jakarta.validation.Valid;
@@ -36,7 +36,7 @@ public class UserController {
     public ResponseEntity<UserResponse> getUserById(
             @PathVariable Long userId,
             @AuthenticationPrincipal User currentUser) {
-        Yetki.kendisi(currentUser, userId);
+        Ownership.requireSelf(currentUser, userId);
         return ResponseEntity.ok(userService.getUserById(userId));
     }
 
@@ -49,7 +49,7 @@ public class UserController {
             @PathVariable Long userId,
             @AuthenticationPrincipal User currentUser,
             @Valid @RequestBody UpdateUserRequest request) {
-        Yetki.kendisi(currentUser, userId);
+        Ownership.requireSelf(currentUser, userId);
         return ResponseEntity.ok(userService.updateUser(userId, request));
     }
 
@@ -62,7 +62,7 @@ public class UserController {
             @PathVariable Long userId,
             @AuthenticationPrincipal User currentUser,
             @Valid @RequestBody ChangePasswordRequest request) {
-        Yetki.kendisi(currentUser, userId);
+        Ownership.requireSelf(currentUser, userId);
         userService.changePassword(userId, request.getCurrentPassword(), request.getNewPassword());
         return ResponseEntity.noContent().build();
     }

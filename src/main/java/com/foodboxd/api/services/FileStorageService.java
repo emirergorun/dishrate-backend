@@ -87,7 +87,7 @@ public class FileStorageService {
      */
     public void deleteByUrl(String url) {
         if (url == null) return;
-        Matcher m = BIZIM_DOSYA.matcher(url.trim());
+        Matcher m = OWN_FILE_URL.matcher(url.trim());
         if (!m.matches()) return;
         Path path = root.resolve(m.group(1)).normalize();
         if (!path.startsWith(root)) return;
@@ -100,7 +100,7 @@ public class FileStorageService {
         }
     }
 
-    private static final Pattern BIZIM_DOSYA =
+    private static final Pattern OWN_FILE_URL =
             Pattern.compile("^https?://[^/\\s]+/api/v1/files/([A-Za-z0-9._-]+)$");
 
     public String contentTypeOf(String filename) {

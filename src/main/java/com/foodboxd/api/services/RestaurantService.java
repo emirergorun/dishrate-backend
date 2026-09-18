@@ -12,7 +12,7 @@ import com.foodboxd.api.exceptions.ResourceNotFoundException;
 import com.foodboxd.api.repositories.AddressRepository;
 import com.foodboxd.api.repositories.MenuItemRepository;
 import com.foodboxd.api.repositories.RestaurantRepository;
-import com.foodboxd.api.utils.AramaMetni;
+import com.foodboxd.api.utils.SearchText;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
@@ -85,9 +85,9 @@ public class RestaurantService {
     @Transactional(readOnly = true)
     public List<RestaurantResponse> searchByName(String name) {
         log.debug("Searching restaurants by name: {}", name);
-        if (AramaMetni.normalize(name).isEmpty()) return List.of();
+        if (SearchText.normalize(name).isEmpty()) return List.of();
         return restaurantRepository.searchByNormalizedName(
-                        AramaMetni.icerir(name), AramaMetni.KAYNAK, AramaMetni.HEDEF, 50)
+                        SearchText.containsPattern(name), SearchText.SOURCE_CHARS, SearchText.TARGET_CHARS, 50)
                 .stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
@@ -192,7 +192,7 @@ public class RestaurantService {
     // Public: Entity → Response DTO (used by other services)
     // -----------------------------------------------------------------------
     public RestaurantResponse toResponse(Restaurant restaurant) {
-        return toResponse(restaurant, anaKategori(
+        return toResponse(restaurant, primaryCategory(
                 menuItemRepository.countCategoriesOfRestaurant(restaurant.getRestaurantId()), 0));
     }
 
@@ -201,23 +201,23 @@ public class RestaurantService {
      * sorgu atılmaz (harita tüm restoranları istiyor).
      */
     private List<RestaurantResponse> toResponses(List<Restaurant> restaurants) {
-        Map<Long, List<Object[]>> sayilar = new HashMap<>();
-        for (Object[] satir : menuItemRepository.countCategoriesPerRestaurant()) {
-            sayilar.computeIfAbsent((Long) satir[0], k -> new ArrayList<>())
-                    .add(new Object[]{satir[1], satir[2]});
+        Map<Long, List<Object[]>> counts = new HashMap<>();
+        for (Object[] row : menuItemRepository.countCategoriesPerRestaurant()) {
+            counts.computeIfAbsent((Long) row[0], k -> new ArrayList<>())
+                    .add(new Object[]{row[1], row[2]});
         }
         return restaurants.stream()
-                .map(r -> toResponse(r, anaKategori(
-                        sayilar.getOrDefault(r.getRestaurantId(), List.of()), 0)))
+                .map(r -> toResponse(r, primaryCategory(
+                        counts.getOrDefault(r.getRestaurantId(), List.of()), 0)))
                 .collect(Collectors.toList());
     }
 
     /** [kategori, adet] satırlarından en kalabalık kategori; eşitlikte alfabetik ilk. */
-    private static String anaKategori(List<Object[]> satirlar, int adIndeksi) {
-        return satirlar.stream()
-                .max(Comparator.<Object[]>comparingLong(s -> (Long) s[adIndeksi + 1])
-                        .thenComparing(s -> (String) s[adIndeksi], Comparator.reverseOrder()))
-                .map(s -> (String) s[adIndeksi])
+    private static String primaryCategory(List<Object[]> rows, int nameIndex) {
+        return rows.stream()
+                .max(Comparator.<Object[]>comparingLong(s -> (Long) s[nameIndex + 1])
+                        .thenComparing(s -> (String) s[nameIndex], Comparator.reverseOrder()))
+                .map(s -> (String) s[nameIndex])
                 .orElse(null);
     }
 

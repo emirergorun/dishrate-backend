@@ -38,15 +38,15 @@ public class FeedService {
      *
      * @param atla sıralamanın başından atlanan kayıt sayısı
      */
-    private record Bolum(String key, List<String> kategoriler,
-                         BigDecimal enAzPuan, Sort sirala, int atla) {}
+    private record Section(String key, List<String> categories,
+                         BigDecimal minRating, Sort sort, int skip) {}
 
-    private static final Sort PUANA_GORE =
+    private static final Sort BY_RATING =
             Sort.by(Sort.Direction.DESC, "averageRating").and(Sort.by(Sort.Direction.DESC, "menuItemId"));
-    private static final Sort YENIYE_GORE = Sort.by(Sort.Direction.DESC, "menuItemId");
+    private static final Sort BY_NEWEST = Sort.by(Sort.Direction.DESC, "menuItemId");
 
-    private static final BigDecimal SIFIR = BigDecimal.ZERO;
-    private static final BigDecimal YUKSEK = BigDecimal.valueOf(4.5);
+    private static final BigDecimal ZERO_RATING = BigDecimal.ZERO;
+    private static final BigDecimal HIGH_RATING = BigDecimal.valueOf(4.5);
 
     /**
      * "Herkes denemek istiyor" en iyilerin ilk bu kadarını atlar, keşfetteki
@@ -57,21 +57,21 @@ public class FeedService {
      * başlıyordu: şeritte 11–20. sıradakiler, açılan listede 21–40.
      * sıradakiler görünüyordu.
      */
-    private static final int EN_IYILER_SERIDI = 10;
+    private static final int TOP_RATED_STRIP_SIZE = 10;
 
-    private static final List<Bolum> BOLUMLER = List.of(
-            new Bolum("top-rated", List.of(), SIFIR, PUANA_GORE, 0),
-            new Bolum("weekly", List.of(), YUKSEK, YENIYE_GORE, 0),
-            new Bolum("most-wanted", List.of(), SIFIR, PUANA_GORE, EN_IYILER_SERIDI),
-            new Bolum("cheat-meal",
+    private static final List<Section> SECTIONS = List.of(
+            new Section("top-rated", List.of(), ZERO_RATING, BY_RATING, 0),
+            new Section("weekly", List.of(), HIGH_RATING, BY_NEWEST, 0),
+            new Section("most-wanted", List.of(), ZERO_RATING, BY_RATING, TOP_RATED_STRIP_SIZE),
+            new Section("cheat-meal",
                     List.of("Burger", "Pizza", "Tatlı", "Türk Mutfağı", "İtalyan", "Noodle", "Sandviç"),
-                    SIFIR, PUANA_GORE, 0),
-            new Bolum("healthy", List.of("Vegan", "Salata", "Kahvaltı", "Meze"), SIFIR, PUANA_GORE, 0),
-            new Bolum("hidden-gems", List.of("Meze", "Noodle", "Vegan", "Tavuk", "Ev Yemeği"),
-                    SIFIR, PUANA_GORE, 0));
+                    ZERO_RATING, BY_RATING, 0),
+            new Section("healthy", List.of("Vegan", "Salata", "Kahvaltı", "Meze"), ZERO_RATING, BY_RATING, 0),
+            new Section("hidden-gems", List.of("Meze", "Noodle", "Vegan", "Tavuk", "Ev Yemeği"),
+                    ZERO_RATING, BY_RATING, 0));
 
     /** İlçede bu sayıdan az sonuç varsa il geneline düşülür. */
-    private static final int ILCE_ESIGI = 4;
+    private static final int DISTRICT_THRESHOLD = 4;
 
     /**
      * Tüm bölümler, her biri en fazla {@code limit} öğe.
@@ -82,14 +82,14 @@ public class FeedService {
      */
     @Transactional(readOnly = true)
     public List<FeedSectionResponse> feed(String city, String district, String category, int limit) {
-        String il = temiz(city);
-        String kategori = temiz(category);
-        String ilce = ilceYeterliMi(il, temiz(district), kategori) ? temiz(district) : "";
-        if (!temiz(district).isEmpty() && ilce.isEmpty()) {
+        String cityKey = clean(city);
+        String categoryKey = clean(category);
+        String districtKey = hasEnoughInDistrict(cityKey, clean(district), categoryKey) ? clean(district) : "";
+        if (!clean(district).isEmpty() && districtKey.isEmpty()) {
             log.debug("İlçede yeterli içerik yok ({}), il geneline düşüldü.", district);
         }
-        return BOLUMLER.stream()
-                .map(b -> bolumGetir(b, il, ilce, kategori, limit))
+        return SECTIONS.stream()
+                .map(b -> findSection(b, cityKey, districtKey, categoryKey, limit))
                 .filter(s -> !s.getItems().isEmpty())
                 .toList();
     }
@@ -100,29 +100,29 @@ public class FeedService {
     @Transactional(readOnly = true)
     public List<MenuItemResponse> section(String key, String city, String district,
                                           String category, int page, int size) {
-        Bolum bolum = BOLUMLER.stream()
+        Section found = SECTIONS.stream()
                 .filter(b -> b.key().equals(key))
                 .findFirst()
                 .orElseThrow(() -> new ResourceNotFoundException("Bilinmeyen bölüm: " + key));
 
-        String il = temiz(city);
-        String kategori = temiz(category);
-        String ilce = ilceYeterliMi(il, temiz(district), kategori) ? temiz(district) : "";
-        long offset = bolum.atla() + (long) page * size;
-        return sorgula(bolum, il, ilce, kategori, offset, size)
+        String cityKey = clean(city);
+        String categoryKey = clean(category);
+        String districtKey = hasEnoughInDistrict(cityKey, clean(district), categoryKey) ? clean(district) : "";
+        long offset = found.skip() + (long) page * size;
+        return query(found, cityKey, districtKey, categoryKey, offset, size)
                 .map(menuItemService::toResponse)
                 .toList();
     }
 
     // ── İç yardımcılar ────────────────────────────────────────────────────────
 
-    private FeedSectionResponse bolumGetir(Bolum b, String il, String ilce,
-                                           String kategori, int limit) {
-        Page<MenuItem> sayfa = sorgula(b, il, ilce, kategori, b.atla(), limit);
+    private FeedSectionResponse findSection(Section b, String cityKey, String districtKey,
+                                           String categoryKey, int limit) {
+        Page<MenuItem> result = query(b, cityKey, districtKey, categoryKey, b.skip(), limit);
         return FeedSectionResponse.builder()
                 .key(b.key())
-                .items(sayfa.map(menuItemService::toResponse).toList())
-                .hasMore(sayfa.getTotalElements() > (long) b.atla() + limit)
+                .items(result.map(menuItemService::toResponse).toList())
+                .hasMore(result.getTotalElements() > (long) b.skip() + limit)
                 .build();
     }
 
@@ -130,36 +130,36 @@ public class FeedService {
      * Seçili kategori çipi bölümün kendi kategorileriyle kesiştirilir:
      * "Burger" seçiliyken "Diyet dostu" bölümü hiç sorgulanmadan boş döner.
      */
-    private Page<MenuItem> sorgula(Bolum b, String il, String ilce, String kategori,
-                                   long offset, int boyut) {
-        List<String> kategoriler;
-        if (kategori.isEmpty()) {
-            kategoriler = b.kategoriler();
-        } else if (b.kategoriler().isEmpty() || b.kategoriler().contains(kategori)) {
-            kategoriler = List.of(kategori);
+    private Page<MenuItem> query(Section b, String cityKey, String districtKey, String categoryKey,
+                                   long offset, int pageSize) {
+        List<String> categories;
+        if (categoryKey.isEmpty()) {
+            categories = b.categories();
+        } else if (b.categories().isEmpty() || b.categories().contains(categoryKey)) {
+            categories = List.of(categoryKey);
         } else {
             return new PageImpl<>(List.of());
         }
         return menuItemRepository.findForFeed(
-                il, ilce,
+                cityKey, districtKey,
                 // JPQL boş koleksiyon kabul etmiyor; catCount=0 ile devre dışı
-                kategoriler.isEmpty() ? List.of("") : kategoriler,
-                kategoriler.size(),
-                b.enAzPuan(),
-                new Aralik(offset, boyut, b.sirala()));
+                categories.isEmpty() ? List.of("") : categories,
+                categories.size(),
+                b.minRating(),
+                new OffsetRange(offset, pageSize, b.sort()));
     }
 
-    private boolean ilceYeterliMi(String il, String ilce, String kategori) {
-        if (ilce.isEmpty()) return false;
-        List<String> kategoriler = kategori.isEmpty() ? List.of("") : List.of(kategori);
-        long adet = menuItemRepository.findForFeed(
-                il, ilce, kategoriler, kategori.isEmpty() ? 0 : 1, SIFIR,
+    private boolean hasEnoughInDistrict(String cityKey, String districtKey, String categoryKey) {
+        if (districtKey.isEmpty()) return false;
+        List<String> categories = categoryKey.isEmpty() ? List.of("") : List.of(categoryKey);
+        long count = menuItemRepository.findForFeed(
+                cityKey, districtKey, categories, categoryKey.isEmpty() ? 0 : 1, ZERO_RATING,
                 PageRequest.of(0, 1)).getTotalElements();
-        return adet >= ILCE_ESIGI;
+        return count >= DISTRICT_THRESHOLD;
     }
 
     /** Sorguya "süzgeç yok" anlamında null yerine boş metin gider. */
-    private static String temiz(String s) {
+    private static String clean(String s) {
         return s == null ? "" : s.trim();
     }
 
@@ -167,18 +167,18 @@ public class FeedService {
      * Sayfa numarası yerine doğrudan kayıt atlayan {@link Pageable}.
      * {@link PageRequest} yalnızca sayfa boyutunun katlarını atlayabiliyor.
      */
-    private record Aralik(long offset, int size, Sort sort) implements Pageable {
+    private record OffsetRange(long offset, int size, Sort sort) implements Pageable {
         @Override public int getPageNumber() { return (int) (offset / size); }
         @Override public int getPageSize() { return size; }
         @Override public long getOffset() { return offset; }
         @Override public Sort getSort() { return sort; }
-        @Override public Pageable next() { return new Aralik(offset + size, size, sort); }
+        @Override public Pageable next() { return new OffsetRange(offset + size, size, sort); }
         @Override public Pageable previousOrFirst() {
-            return offset < size ? first() : new Aralik(offset - size, size, sort);
+            return offset < size ? first() : new OffsetRange(offset - size, size, sort);
         }
-        @Override public Pageable first() { return new Aralik(0, size, sort); }
+        @Override public Pageable first() { return new OffsetRange(0, size, sort); }
         @Override public Pageable withPage(int pageNumber) {
-            return new Aralik((long) pageNumber * size, size, sort);
+            return new OffsetRange((long) pageNumber * size, size, sort);
         }
         @Override public boolean hasPrevious() { return offset > 0; }
     }

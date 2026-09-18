@@ -59,7 +59,7 @@ public class ClaimService {
 
         // Aynı restoran için başkasının bekleyen talebi varsa sıraya girilmez;
         // admin önce onu sonuçlandırsın, yoksa iki talep birden onaylanabilir.
-        boolean baskasiBekliyor = claimRepository
+        boolean pendingByOther = claimRepository
                 .existsByRestaurantRestaurantIdAndStatus(restaurantId, ClaimStatus.PENDING);
 
         RestaurantClaim existing = claimRepository
@@ -74,7 +74,7 @@ public class ClaimService {
             if (existing.getStatus() == ClaimStatus.APPROVED) {
                 throw new IllegalStateException("Bu restoranın sahibi zaten sensin.");
             }
-            if (baskasiBekliyor) {
+            if (pendingByOther) {
                 throw new IllegalStateException(
                         "Bu restoran için inceleme bekleyen başka bir talep var.");
             }
@@ -89,7 +89,7 @@ public class ClaimService {
             return RestaurantClaimResponse.from(saved);
         }
 
-        if (baskasiBekliyor) {
+        if (pendingByOther) {
             throw new IllegalStateException(
                     "Bu restoran için inceleme bekleyen başka bir talep var.");
         }

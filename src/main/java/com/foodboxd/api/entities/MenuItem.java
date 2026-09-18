@@ -45,7 +45,7 @@ public class MenuItem {
      * "en çok değerlendirilen"e göre sıralamak için her yemekte ayrı sayım
      * sorgusu atmak gerekmesin. {@code RatingService} ortalamayla birlikte
      * günceller; kolon sonradan eklendiği için eski satırları
-     * {@code VeriGocu} doldurur.
+     * {@code DataMigrator} doldurur.
      */
     @Column(name = "rating_count")
     @Builder.Default

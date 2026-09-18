@@ -1,6 +1,6 @@
 package com.foodboxd.api.services;
 
-import com.foodboxd.api.security.Yetki;
+import com.foodboxd.api.security.Ownership;
 import com.foodboxd.api.dtos.requests.CreateRatingRequest;
 import com.foodboxd.api.dtos.responses.MenuItemReviewResponse;
 import com.foodboxd.api.dtos.responses.RatingResponse;
@@ -181,7 +181,7 @@ public class RatingService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Rating not found. ID: " + ratingId
                 ));
-        Yetki.kendisi(currentUser, rating.getUser().getUserId());
+        Ownership.requireSelf(currentUser, rating.getUser().getUserId());
 
         MenuItem menuItem = rating.getMenuItem();
         ratingRepository.deleteById(ratingId);

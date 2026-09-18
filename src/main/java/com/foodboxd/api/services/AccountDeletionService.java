@@ -49,8 +49,8 @@ public class AccountDeletionService {
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
-    public void deleteOwnAccount(User istekYapan, String password) {
-        Long userId = istekYapan.getUserId();
+    public void deleteOwnAccount(User requester, String password) {
+        Long userId = requester.getUserId();
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found. ID: " + userId));
 
@@ -60,14 +60,14 @@ public class AccountDeletionService {
         }
 
         List<Rating> ratings = ratingRepository.findByUser_UserId(userId);
-        Map<Long, MenuItem> etkilenenYemekler = new LinkedHashMap<>();
-        List<String> silinecekDosyalar = new ArrayList<>();
+        Map<Long, MenuItem> affectedItems = new LinkedHashMap<>();
+        List<String> filesToDelete = new ArrayList<>();
         for (Rating r : ratings) {
-            etkilenenYemekler.putIfAbsent(r.getMenuItem().getMenuItemId(), r.getMenuItem());
-            silinecekDosyalar.add(r.getPhotoUrl());
+            affectedItems.putIfAbsent(r.getMenuItem().getMenuItemId(), r.getMenuItem());
+            filesToDelete.add(r.getPhotoUrl());
         }
-        silinecekDosyalar.add(user.getProfilePhotoUrl());
-        silinecekDosyalar.add(user.getProfilePhotoOriginalUrl());
+        filesToDelete.add(user.getProfilePhotoUrl());
+        filesToDelete.add(user.getProfilePhotoOriginalUrl());
 
         ratingRepository.deleteAllOfUser(userId);
         wishlistItemRepository.deleteAllOfUser(userId);
@@ -76,7 +76,7 @@ public class AccountDeletionService {
         restaurantRepository.clearOwner(userId);
         refreshTokenRepository.deleteByUser(user);
 
-        ratingService.recalculateAverages(etkilenenYemekler.values());
+        ratingService.recalculateAverages(affectedItems.values());
 
         userRepository.delete(user);
 
@@ -85,11 +85,11 @@ public class AccountDeletionService {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                silinecekDosyalar.forEach(fileStorageService::deleteByUrl);
+                filesToDelete.forEach(fileStorageService::deleteByUrl);
             }
         });
 
         log.info("Hesap silindi. ID: {}, puan: {}, etkilenen yemek: {}",
-                userId, ratings.size(), etkilenenYemekler.size());
+                userId, ratings.size(), affectedItems.size());
     }
 }

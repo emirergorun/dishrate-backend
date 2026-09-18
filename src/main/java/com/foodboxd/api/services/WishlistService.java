@@ -1,6 +1,6 @@
 package com.foodboxd.api.services;
 
-import com.foodboxd.api.security.Yetki;
+import com.foodboxd.api.security.Ownership;
 import com.foodboxd.api.dtos.requests.CreateWishlistItemRequest;
 import com.foodboxd.api.dtos.responses.WishlistItemResponse;
 import com.foodboxd.api.entities.MenuItem;
@@ -91,7 +91,7 @@ public class WishlistService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Wishlist item not found. ID: " + wishId
                 ));
-        Yetki.kendisi(currentUser, item.getUser().getUserId());
+        Ownership.requireSelf(currentUser, item.getUser().getUserId());
         wishlistItemRepository.deleteById(wishId);
         log.info("Item removed from wishlist. Wish ID: {}", wishId);
     }

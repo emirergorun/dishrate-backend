@@ -6,7 +6,7 @@ import com.foodboxd.api.entities.MenuItem;
 import com.foodboxd.api.entities.Restaurant;
 import com.foodboxd.api.repositories.MenuItemRepository;
 import com.foodboxd.api.repositories.RestaurantRepository;
-import com.foodboxd.api.utils.AramaMetni;
+import com.foodboxd.api.utils.SearchText;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,11 +26,11 @@ import java.util.Map;
 public class SearchService {
 
     /** Bu uzunluktan kısa sorgular her şeyle eşleşir; hiç aranmaz. */
-    private static final int EN_KISA = 2;
-    private static final int EN_FAZLA_YEMEK = 300;
-    private static final int EN_FAZLA_RESTORAN = 50;
+    private static final int MIN_QUERY_LENGTH = 2;
+    private static final int MAX_ITEMS = 300;
+    private static final int MAX_RESTAURANTS = 50;
     /** Adı eşleşen restoranlarda kartta gösterilen menü uzunluğu. */
-    private static final int AD_ESLESMESI_MENU = 20;
+    private static final int NAME_MATCH_MENU_LIMIT = 20;
 
     private final MenuItemRepository menuItemRepository;
     private final RestaurantRepository restaurantRepository;
@@ -38,51 +38,51 @@ public class SearchService {
 
     @Transactional(readOnly = true)
     public List<SearchResultResponse> search(String q) {
-        if (AramaMetni.normalize(q).length() < EN_KISA) return List.of();
-        String kalip = AramaMetni.icerir(q);
+        if (SearchText.normalize(q).length() < MIN_QUERY_LENGTH) return List.of();
+        String pattern = SearchText.containsPattern(q);
 
-        Map<Long, SearchResultResponse> sonuc = new LinkedHashMap<>();
+        Map<Long, SearchResultResponse> result = new LinkedHashMap<>();
 
         // 1) Adı eşleşen restoranlar önce — kullanıcı büyük ihtimalle onu arıyor.
         for (Restaurant r : restaurantRepository.searchByNormalizedName(
-                kalip, AramaMetni.KAYNAK, AramaMetni.HEDEF, EN_FAZLA_RESTORAN)) {
+                pattern, SearchText.SOURCE_CHARS, SearchText.TARGET_CHARS, MAX_RESTAURANTS)) {
             List<MenuItemResponse> menu = menuItemRepository
                     .findByRestaurant_RestaurantId(r.getRestaurantId()).stream()
                     .sorted(Comparator.comparing(MenuItem::getAverageRating).reversed())
-                    .limit(AD_ESLESMESI_MENU)
+                    .limit(NAME_MATCH_MENU_LIMIT)
                     .map(menuItemService::toResponse)
                     .toList();
-            sonuc.put(r.getRestaurantId(), kart(r, true, new ArrayList<>(menu)));
+            result.put(r.getRestaurantId(), entry(r, true, new ArrayList<>(menu)));
         }
 
         // 2) Yemeği ya da kategorisi eşleşenler, puana göre.
         for (MenuItem mi : menuItemRepository.search(
-                kalip, AramaMetni.KAYNAK, AramaMetni.HEDEF, EN_FAZLA_YEMEK)) {
+                pattern, SearchText.SOURCE_CHARS, SearchText.TARGET_CHARS, MAX_ITEMS)) {
             Restaurant r = mi.getRestaurant();
-            SearchResultResponse kart = sonuc.get(r.getRestaurantId());
-            if (kart == null) {
-                if (sonuc.size() >= EN_FAZLA_RESTORAN) continue;
-                kart = kart(r, false, new ArrayList<>());
-                sonuc.put(r.getRestaurantId(), kart);
+            SearchResultResponse entry = result.get(r.getRestaurantId());
+            if (entry == null) {
+                if (result.size() >= MAX_RESTAURANTS) continue;
+                entry = entry(r, false, new ArrayList<>());
+                result.put(r.getRestaurantId(), entry);
             }
-            if (!kart.isNameMatched()) {
-                kart.getItems().add(menuItemService.toResponse(mi));
+            if (!entry.isNameMatched()) {
+                entry.getItems().add(menuItemService.toResponse(mi));
             }
         }
-        return new ArrayList<>(sonuc.values());
+        return new ArrayList<>(result.values());
     }
 
-    private SearchResultResponse kart(Restaurant r, boolean adEslesti,
+    private SearchResultResponse entry(Restaurant r, boolean nameMatch,
                                       List<MenuItemResponse> items) {
-        var adres = r.getAddress();
+        var address = r.getAddress();
         return SearchResultResponse.builder()
                 .restaurantId(r.getRestaurantId())
                 .name(r.getName())
-                .city(adres != null ? adres.getCity() : null)
-                .district(adres != null ? adres.getDistrict() : null)
-                .latitude(adres != null ? adres.getLatitude() : null)
-                .longitude(adres != null ? adres.getLongitude() : null)
-                .nameMatched(adEslesti)
+                .city(address != null ? address.getCity() : null)
+                .district(address != null ? address.getDistrict() : null)
+                .latitude(address != null ? address.getLatitude() : null)
+                .longitude(address != null ? address.getLongitude() : null)
+                .nameMatched(nameMatch)
                 .items(items)
                 .build();
     }

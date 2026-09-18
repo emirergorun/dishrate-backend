@@ -35,7 +35,7 @@ import java.util.*;
  *
  * <h2>Veri zaten varken</h2>
  * Silip yeniden üretmez — kimlikler değişir, senin sahte yemeklere verdiğin
- * puanlar giderdi. Onun yerine {@link #senkronla()} yemeklerin kategorisini ve
+ * puanlar giderdi. Onun yerine {@link #sync()} yemeklerin kategorisini ve
  * fotoğrafını güncel tablolara göre düzeltir, eksik restoran türlerini ekler.
  *
  * <h2>Puanlar neden rastgele değil</h2>
@@ -67,7 +67,7 @@ public class MockDataSeeder implements CommandLineRunner {
     private final RatingRepository ratingRepository;
     private final PasswordEncoder passwordEncoder;
     private final EntityManager entityManager;
-    private final YemekFotograflari fotograflar;
+    private final DishPhotos photos;
 
     @Value("${app.seed.mock:false}")
     private boolean mockEnabled;
@@ -76,14 +76,14 @@ public class MockDataSeeder implements CommandLineRunner {
     private boolean wipeRequested;
 
     // ── Hacim ─────────────────────────────────────────────────────────────────
-    private static final int RESTORAN_SAYISI = 180;
-    private static final int KULLANICI_SAYISI = 150;
-    private static final int HEDEF_PUAN_SAYISI = 12_000;
+    private static final int RESTAURANT_COUNT = 180;
+    private static final int USER_COUNT = 150;
+    private static final int TARGET_RATING_COUNT = 12_000;
     /** Ev yemeği türü sonradan eklendi; mevcut veriye bu kadar restoran eklenir. */
-    private static final int EV_YEMEGI_EK_RESTORAN = 20;
-    private static final String ETIKET = "mock";
-    private static final String EPOSTA_ALANI = "@mock.test";
-    private static final String SIFRE = "Deneme1234!";
+    private static final int EXTRA_HOME_COOKING_RESTAURANTS = 20;
+    private static final String SEED_TAG = "mock";
+    private static final String EMAIL_DOMAIN = "@mock.test";
+    private static final String PASSWORD = "Deneme1234!";
 
     /** Sabit tohum: her çalıştırma aynı veriyi üretir, hata ayıklaması kolay olur. */
     private final Random rnd = new Random(20260912L);
@@ -97,24 +97,24 @@ public class MockDataSeeder implements CommandLineRunner {
         }
         if (!mockEnabled) return;
 
-        if (restaurantRepository.countBySeedTag(ETIKET) > 0) {
-            senkronla();
+        if (restaurantRepository.countBySeedTag(SEED_TAG) > 0) {
+            sync();
             return;
         }
 
-        long basla = System.currentTimeMillis();
+        long start = System.currentTimeMillis();
         log.info("Sahte veri üretiliyor… (bu bir dakika sürebilir)");
 
-        Map<String, Category> kategoriler = kategorileriHazirla();
-        List<User> kullanicilar = kullanicilariUret();
-        List<MenuItem> yemekler = restoranVeMenuleriUret(
-                kategoriler, RESTORAN_SAYISI, null, new HashSet<>());
-        puanlariUret(yemekler, kullanicilar);
+        Map<String, Category> categories = prepareCategories();
+        List<User> users = generateUsers();
+        List<MenuItem> dishes = generateRestaurantsAndMenus(
+                categories, RESTAURANT_COUNT, null, new HashSet<>());
+        generateRatings(dishes, users);
 
         log.info("Sahte veri hazır: {} restoran, {} yemek, {} kullanıcı, {} puan ({} sn).",
-                restaurantRepository.countBySeedTag(ETIKET), yemekler.size(),
-                kullanicilar.size(), ratingRepository.count(),
-                (System.currentTimeMillis() - basla) / 1000);
+                restaurantRepository.countBySeedTag(SEED_TAG), dishes.size(),
+                users.size(), ratingRepository.count(),
+                (System.currentTimeMillis() - start) / 1000);
     }
 
     // ── Mevcut veriyi güncelleme ──────────────────────────────────────────────
@@ -122,59 +122,59 @@ public class MockDataSeeder implements CommandLineRunner {
     /**
      * Silmeden, mevcut sahte veriyi güncel tanımlara getirir:
      * <ul>
-     *   <li>yemeğin kategorisi {@link #YEMEKLER} tablosuna göre düzeltilir
+     *   <li>yemeğin kategorisi {@link #DISHES} tablosuna göre düzeltilir
      *       (örn. lahmacun artık "Türk Mutfağı"),</li>
      *   <li>fotoğrafı havuzda olmayan yemek havuzdan fotoğraf alır,</li>
      *   <li>hiç "Ev Yemeği" restoranı yoksa eklenir.</li>
      * </ul>
      */
-    private void senkronla() {
-        Map<String, Category> kategoriler = kategorileriHazirla();
+    private void sync() {
+        Map<String, Category> categories = prepareCategories();
 
-        int kategoriDuzeltilen = 0;
-        int fotoDuzeltilen = 0;
-        List<MenuItem> yemekler = menuItemRepository.findBySeedTag(ETIKET);
-        for (MenuItem mi : yemekler) {
-            String dogru = YEMEK_KATEGORISI.get(mi.getName());
-            if (dogru != null && (mi.getCategory() == null
-                    || !dogru.equals(mi.getCategory().getName()))) {
-                mi.setCategory(kategoriler.get(dogru));
-                kategoriDuzeltilen++;
+        int categoriesFixed = 0;
+        int photosFixed = 0;
+        List<MenuItem> dishes = menuItemRepository.findBySeedTag(SEED_TAG);
+        for (MenuItem mi : dishes) {
+            String correctCategory = DISH_CATEGORY.get(mi.getName());
+            if (correctCategory != null && (mi.getCategory() == null
+                    || !correctCategory.equals(mi.getCategory().getName()))) {
+                mi.setCategory(categories.get(correctCategory));
+                categoriesFixed++;
             }
-            List<String> havuz = fotograflar.fotolar(mi.getName());
-            if (!havuz.isEmpty() && !havuz.contains(mi.getPhotoUrl())) {
-                mi.setPhotoUrl(fotograflar.sec(mi.getName(), mi.getMenuItemId()));
-                fotoDuzeltilen++;
-            }
-        }
-        menuItemRepository.saveAll(yemekler);
-
-        Set<String> adlar = new HashSet<>();
-        boolean evYemegiVar = false;
-        for (Restaurant r : restaurantRepository.findBySeedTag(ETIKET)) {
-            adlar.add(r.getName());
-            for (String tur : TUR.get("Ev Yemeği")) {
-                if (r.getName().endsWith(tur)) evYemegiVar = true;
+            List<String> pool = photos.photos(mi.getName());
+            if (!pool.isEmpty() && !pool.contains(mi.getPhotoUrl())) {
+                mi.setPhotoUrl(photos.pick(mi.getName(), mi.getMenuItemId()));
+                photosFixed++;
             }
         }
+        menuItemRepository.saveAll(dishes);
 
-        int eklenen = 0;
-        if (!evYemegiVar) {
-            List<User> kullanicilar = entityManager
-                    .createQuery("SELECT u FROM User u WHERE u.email LIKE :alan", User.class)
-                    .setParameter("alan", "%" + EPOSTA_ALANI)
+        Set<String> names = new HashSet<>();
+        boolean hasHomeCooking = false;
+        for (Restaurant r : restaurantRepository.findBySeedTag(SEED_TAG)) {
+            names.add(r.getName());
+            for (String cuisine : CUISINE_NAMES.get("Ev Yemeği")) {
+                if (r.getName().endsWith(cuisine)) hasHomeCooking = true;
+            }
+        }
+
+        int added = 0;
+        if (!hasHomeCooking) {
+            List<User> users = entityManager
+                    .createQuery("SELECT u FROM User u WHERE u.email LIKE :domain", User.class)
+                    .setParameter("domain", "%" + EMAIL_DOMAIN)
                     .getResultList();
-            if (!kullanicilar.isEmpty()) {
-                List<MenuItem> yeni = restoranVeMenuleriUret(
-                        kategoriler, EV_YEMEGI_EK_RESTORAN, "Ev Yemeği", adlar);
-                puanlariUret(yeni, kullanicilar);
-                eklenen = EV_YEMEGI_EK_RESTORAN;
+            if (!users.isEmpty()) {
+                List<MenuItem> fresh = generateRestaurantsAndMenus(
+                        categories, EXTRA_HOME_COOKING_RESTAURANTS, "Ev Yemeği", names);
+                generateRatings(fresh, users);
+                added = EXTRA_HOME_COOKING_RESTAURANTS;
             }
         }
 
         log.info("Sahte veri güncellendi: {} yemeğin kategorisi, {} yemeğin fotoğrafı "
                 + "düzeltildi, {} ev yemeği restoranı eklendi.",
-                kategoriDuzeltilen, fotoDuzeltilen, eklenen);
+                categoriesFixed, photosFixed, added);
     }
 
     // ── Silme ─────────────────────────────────────────────────────────────────
@@ -184,89 +184,89 @@ public class MockDataSeeder implements CommandLineRunner {
      * önce yapraklar (puan, istek listesi), sonra gövde (yemek, restoran, adres).
      */
     private void wipe() {
-        long restoran = restaurantRepository.countBySeedTag(ETIKET);
-        if (restoran == 0) {
+        long restaurantCount = restaurantRepository.countBySeedTag(SEED_TAG);
+        if (restaurantCount == 0) {
             log.info("Silinecek sahte veri yok.");
             return;
         }
         log.info("Sahte veri siliniyor…");
 
-        int puan = entityManager.createNativeQuery("""
+        int ratingCount = entityManager.createNativeQuery("""
                 DELETE FROM ratings WHERE menu_item_id IN (
                   SELECT mi.menu_item_id FROM menu_items mi
                   JOIN restaurants r ON r.restaurant_id = mi.restaurant_id
                   WHERE r.seed_tag = :tag)
-                """).setParameter("tag", ETIKET).executeUpdate();
+                """).setParameter("tag", SEED_TAG).executeUpdate();
 
         entityManager.createNativeQuery("""
                 DELETE FROM wishlist_items WHERE menu_item_id IN (
                   SELECT mi.menu_item_id FROM menu_items mi
                   JOIN restaurants r ON r.restaurant_id = mi.restaurant_id
                   WHERE r.seed_tag = :tag)
-                """).setParameter("tag", ETIKET).executeUpdate();
+                """).setParameter("tag", SEED_TAG).executeUpdate();
 
-        int yemek = entityManager.createNativeQuery("""
+        int dishCount = entityManager.createNativeQuery("""
                 DELETE FROM menu_items WHERE restaurant_id IN (
                   SELECT restaurant_id FROM restaurants WHERE seed_tag = :tag)
-                """).setParameter("tag", ETIKET).executeUpdate();
+                """).setParameter("tag", SEED_TAG).executeUpdate();
 
         entityManager.createNativeQuery(
-                        "CREATE TEMP TABLE IF NOT EXISTS silinecek_adres AS "
+                        "CREATE TEMP TABLE IF NOT EXISTS addresses_to_delete AS "
                                 + "SELECT address_id FROM restaurants WHERE seed_tag = :tag")
-                .setParameter("tag", ETIKET).executeUpdate();
+                .setParameter("tag", SEED_TAG).executeUpdate();
 
         entityManager.createNativeQuery("DELETE FROM restaurants WHERE seed_tag = :tag")
-                .setParameter("tag", ETIKET).executeUpdate();
+                .setParameter("tag", SEED_TAG).executeUpdate();
 
         entityManager.createNativeQuery(
-                "DELETE FROM addresses WHERE address_id IN (SELECT address_id FROM silinecek_adres)")
+                "DELETE FROM addresses WHERE address_id IN (SELECT address_id FROM addresses_to_delete)")
                 .executeUpdate();
-        entityManager.createNativeQuery("DROP TABLE IF EXISTS silinecek_adres").executeUpdate();
+        entityManager.createNativeQuery("DROP TABLE IF EXISTS addresses_to_delete").executeUpdate();
 
         entityManager.createNativeQuery(
                         "DELETE FROM refresh_tokens WHERE user_id IN "
-                                + "(SELECT user_id FROM users WHERE email LIKE :alan)")
-                .setParameter("alan", "%" + EPOSTA_ALANI).executeUpdate();
+                                + "(SELECT user_id FROM users WHERE email LIKE :domain)")
+                .setParameter("domain", "%" + EMAIL_DOMAIN).executeUpdate();
         entityManager.createNativeQuery(
                         "DELETE FROM ratings WHERE user_id IN "
-                                + "(SELECT user_id FROM users WHERE email LIKE :alan)")
-                .setParameter("alan", "%" + EPOSTA_ALANI).executeUpdate();
-        int kullanici = entityManager.createNativeQuery(
-                        "DELETE FROM users WHERE email LIKE :alan")
-                .setParameter("alan", "%" + EPOSTA_ALANI).executeUpdate();
+                                + "(SELECT user_id FROM users WHERE email LIKE :domain)")
+                .setParameter("domain", "%" + EMAIL_DOMAIN).executeUpdate();
+        int userCount = entityManager.createNativeQuery(
+                        "DELETE FROM users WHERE email LIKE :domain")
+                .setParameter("domain", "%" + EMAIL_DOMAIN).executeUpdate();
 
         log.info("Sahte veri silindi: {} restoran, {} yemek, {} puan, {} kullanıcı.",
-                restoran, yemek, puan, kullanici);
+                restaurantCount, dishCount, ratingCount, userCount);
     }
 
     // ── Kategoriler ───────────────────────────────────────────────────────────
 
-    private Map<String, Category> kategorileriHazirla() {
+    private Map<String, Category> prepareCategories() {
         Map<String, Category> map = new LinkedHashMap<>();
-        for (String ad : KATEGORILER) {
-            map.put(ad, categoryRepository.findByName(ad)
-                    .orElseGet(() -> categoryRepository.save(Category.builder().name(ad).build())));
+        for (String name : CATEGORIES) {
+            map.put(name, categoryRepository.findByName(name)
+                    .orElseGet(() -> categoryRepository.save(Category.builder().name(name).build())));
         }
         return map;
     }
 
     // ── Kullanıcılar ──────────────────────────────────────────────────────────
 
-    private List<User> kullanicilariUret() {
-        String hash = passwordEncoder.encode(SIFRE);   // bir kez; bcrypt pahalı
-        List<User> liste = new ArrayList<>(KULLANICI_SAYISI);
-        for (int i = 1; i <= KULLANICI_SAYISI; i++) {
+    private List<User> generateUsers() {
+        String hash = passwordEncoder.encode(PASSWORD);   // bir kez; bcrypt pahalı
+        List<User> list = new ArrayList<>(USER_COUNT);
+        for (int i = 1; i <= USER_COUNT; i++) {
             String no = String.format("%03d", i);
-            liste.add(User.builder()
+            list.add(User.builder()
                     .username("kullanici" + no)
-                    .firstName(AD[rnd.nextInt(AD.length)])
-                    .lastName(SOYAD[rnd.nextInt(SOYAD.length)])
-                    .email("kullanici" + no + EPOSTA_ALANI)
+                    .firstName(FIRST_NAMES[rnd.nextInt(FIRST_NAMES.length)])
+                    .lastName(LAST_NAMES[rnd.nextInt(LAST_NAMES.length)])
+                    .email("kullanici" + no + EMAIL_DOMAIN)
                     .passwordHash(hash)
                     .role(UserRole.USER)
                     .build());
         }
-        return userRepository.saveAll(liste);
+        return userRepository.saveAll(list);
     }
 
     // ── Restoranlar ve menüler ────────────────────────────────────────────────
@@ -275,74 +275,74 @@ public class MockDataSeeder implements CommandLineRunner {
      * @param sabitKategori {@code null} → her restoranın türü rastgele
      * @param kullanilanAdlar mevcut restoran adları; yeni adlar bunlarla çakışmaz
      */
-    private List<MenuItem> restoranVeMenuleriUret(Map<String, Category> kategoriler, int adet,
-                                                  String sabitKategori,
-                                                  Set<String> kullanilanAdlar) {
-        List<MenuItem> tumYemekler = new ArrayList<>();
+    private List<MenuItem> generateRestaurantsAndMenus(Map<String, Category> categories, int count,
+                                                  String fixedCategory,
+                                                  Set<String> usedNames) {
+        List<MenuItem> allDishes = new ArrayList<>();
 
-        for (int i = 0; i < adet; i++) {
-            String kategori = sabitKategori != null ? sabitKategori
-                    : KATEGORILER[rnd.nextInt(KATEGORILER.length)];
-            Ilce ilce = ILCELER[agirlikliIlce()];
+        for (int i = 0; i < count; i++) {
+            String category = fixedCategory != null ? fixedCategory
+                    : CATEGORIES[rnd.nextInt(CATEGORIES.length)];
+            District district = DISTRICTS[weightedDistrict()];
 
-            String ad = benzersizAd(kategori, ilce.ad(), kullanilanAdlar);
+            String name = uniqueName(category, district.name(), usedNames);
 
             // Koordinat: ilçe merkezinin çevresine dağıt (~1.5 km)
-            double lat = ilce.lat() + (rnd.nextDouble() - 0.5) * 0.025;
-            double lng = ilce.lng() + (rnd.nextDouble() - 0.5) * 0.030;
+            double lat = district.lat() + (rnd.nextDouble() - 0.5) * 0.025;
+            double lng = district.lng() + (rnd.nextDouble() - 0.5) * 0.030;
 
-            Address adres = addressRepository.save(Address.builder()
+            Address address = addressRepository.save(Address.builder()
                     .city("İstanbul")
-                    .district(ilce.ad())
-                    .neighbourhood(MAHALLE[rnd.nextInt(MAHALLE.length)] + " Mah.")
-                    .addressLine1(CADDE[rnd.nextInt(CADDE.length)])
+                    .district(district.name())
+                    .neighbourhood(NEIGHBORHOODS[rnd.nextInt(NEIGHBORHOODS.length)] + " Mah.")
+                    .addressLine1(STREETS[rnd.nextInt(STREETS.length)])
                     .buildingNo(String.valueOf(1 + rnd.nextInt(120)))
-                    .fullAddress(ad + ", " + ilce.ad() + "/İstanbul")
+                    .fullAddress(name + ", " + district.name() + "/İstanbul")
                     .latitude(lat)
                     .longitude(lng)
                     .build());
 
-            Restaurant restoran = restaurantRepository.save(Restaurant.builder()
-                    .name(ad)
-                    .address(adres)
-                    .seedTag(ETIKET)
+            Restaurant restaurant = restaurantRepository.save(Restaurant.builder()
+                    .name(name)
+                    .address(address)
+                    .seedTag(SEED_TAG)
                     .build());
 
-            tumYemekler.addAll(menuUret(restoran, kategori, kategoriler));
+            allDishes.addAll(generateMenu(restaurant, category, categories));
         }
-        return tumYemekler;
+        return allDishes;
     }
 
     /** Restoranın ana kategorisinden çoğunluk, yanına birkaç yan kategori. */
-    private List<MenuItem> menuUret(Restaurant restoran, String anaKategori,
-                                    Map<String, Category> kategoriler) {
-        int adet = 8 + rnd.nextInt(5);                 // 8–12
-        List<MenuItem> yemekler = new ArrayList<>(adet);
-        Set<String> adlar = new HashSet<>();
+    private List<MenuItem> generateMenu(Restaurant restaurant, String primaryCategory,
+                                    Map<String, Category> categories) {
+        int count = 8 + rnd.nextInt(5);                 // 8–12
+        List<MenuItem> dishes = new ArrayList<>(count);
+        Set<String> names = new HashSet<>();
 
-        for (int i = 0; i < adet; i++) {
+        for (int i = 0; i < count; i++) {
             // İlk %70 ana kategoriden; gerisi tatlı/içecek gibi yan kategorilerden
-            String kategori = (i < adet * 0.7) ? anaKategori
-                    : YAN_KATEGORILER[rnd.nextInt(YAN_KATEGORILER.length)];
-            String[] havuz = YEMEKLER.get(kategori);
-            String ad = havuz[rnd.nextInt(havuz.length)];
-            if (!adlar.add(ad)) continue;              // aynı restoranda tekrar etmesin
+            String category = (i < count * 0.7) ? primaryCategory
+                    : SIDE_CATEGORIES[rnd.nextInt(SIDE_CATEGORIES.length)];
+            String[] pool = DISHES.get(category);
+            String name = pool[rnd.nextInt(pool.length)];
+            if (!names.add(name)) continue;              // aynı restoranda tekrar etmesin
 
-            int[] aralik = FIYAT.get(kategori);
-            int fiyat = aralik[0] + rnd.nextInt(aralik[1] - aralik[0] + 1);
-            fiyat = (fiyat / 5) * 5;                   // 5'in katına yuvarla
+            int[] range = PRICE_RANGES.get(category);
+            int price = range[0] + rnd.nextInt(range[1] - range[0] + 1);
+            price = (price / 5) * 5;                   // 5'in katına yuvarla
 
-            yemekler.add(MenuItem.builder()
-                    .restaurant(restoran)
-                    .category(kategoriler.get(kategori))
-                    .name(ad)
-                    .price(BigDecimal.valueOf(fiyat))
-                    .photoUrl(fotograflar.sec(ad, rnd.nextInt(1_000)))
+            dishes.add(MenuItem.builder()
+                    .restaurant(restaurant)
+                    .category(categories.get(category))
+                    .name(name)
+                    .price(BigDecimal.valueOf(price))
+                    .photoUrl(photos.pick(name, rnd.nextInt(1_000)))
                     .averageRating(BigDecimal.ZERO)
                     .ratingCount(0)
                     .build());
         }
-        return menuItemRepository.saveAll(yemekler);
+        return menuItemRepository.saveAll(dishes);
     }
 
     // ── Puanlar ───────────────────────────────────────────────────────────────
@@ -351,40 +351,40 @@ public class MockDataSeeder implements CommandLineRunner {
      * Her yemeğe bir "gerçek kalite" atanır (çoğu 3.5–4.5, az sayıda uç örnek).
      * Puan sayısı uzun kuyruklu: az sayıda yemek çok puan alır.
      */
-    private void puanlariUret(List<MenuItem> yemekler, List<User> kullanicilar) {
+    private void generateRatings(List<MenuItem> dishes, List<User> users) {
         List<Rating> tampon = new ArrayList<>(1000);
-        int toplam = 0;
+        int total = 0;
 
         // Yemek başına düşen ortalama puan sayısı. Tüm üretimdeki yemek sayısına
         // göre sabit: sonradan eklenen 20 restoranlık bir grup kendi küçük
         // yemek sayısına bölünseydi yemek başına onlarca puan alırdı.
-        double ortalamaPuanSayisi = (double) HEDEF_PUAN_SAYISI / (RESTORAN_SAYISI * 7);
+        double averageRatingCount = (double) TARGET_RATING_COUNT / (RESTAURANT_COUNT * 7);
 
-        for (MenuItem yemek : yemekler) {
-            double kalite = kaliteUret();
-            int kacPuan = populerlikUret(ortalamaPuanSayisi);
-            kacPuan = Math.min(kacPuan, kullanicilar.size());
-            if (kacPuan == 0) continue;
+        for (MenuItem dish : dishes) {
+            double quality = generateQuality();
+            int ratingCount = generatePopularity(averageRatingCount);
+            ratingCount = Math.min(ratingCount, users.size());
+            if (ratingCount == 0) continue;
 
             // Aynı kullanıcı aynı yemeği bir kez puanlayabilir (benzersizlik kısıtı)
-            List<User> karisik = new ArrayList<>(kullanicilar);
-            Collections.shuffle(karisik, rnd);
+            List<User> shuffled = new ArrayList<>(users);
+            Collections.shuffle(shuffled, rnd);
 
-            double toplamSkor = 0;
-            for (int i = 0; i < kacPuan; i++) {
-                double skor = yarimYildizaYuvarla(kalite + rnd.nextGaussian() * 0.55);
-                toplamSkor += skor;
+            double totalScore = 0;
+            for (int i = 0; i < ratingCount; i++) {
+                double score = roundToHalfStar(quality + rnd.nextGaussian() * 0.55);
+                totalScore += score;
                 tampon.add(Rating.builder()
-                        .user(karisik.get(i))
-                        .menuItem(yemek)
-                        .score(BigDecimal.valueOf(skor))
-                        .comment(rnd.nextDouble() < 0.30 ? yorumUret(skor) : null)
+                        .user(shuffled.get(i))
+                        .menuItem(dish)
+                        .score(BigDecimal.valueOf(score))
+                        .comment(rnd.nextDouble() < 0.30 ? generateComment(score) : null)
                         .build());
             }
-            yemek.setAverageRating(BigDecimal.valueOf(toplamSkor / kacPuan)
+            dish.setAverageRating(BigDecimal.valueOf(totalScore / ratingCount)
                     .setScale(2, RoundingMode.HALF_UP));
-            yemek.setRatingCount(kacPuan);
-            toplam += kacPuan;
+            dish.setRatingCount(ratingCount);
+            total += ratingCount;
 
             if (tampon.size() >= 1000) {
                 ratingRepository.saveAll(tampon);
@@ -392,12 +392,12 @@ public class MockDataSeeder implements CommandLineRunner {
             }
         }
         if (!tampon.isEmpty()) ratingRepository.saveAll(tampon);
-        menuItemRepository.saveAll(yemekler);
-        log.info("  {} puan üretildi.", toplam);
+        menuItemRepository.saveAll(dishes);
+        log.info("  {} puan üretildi.", total);
     }
 
     /** Çoğu yemek 3.5–4.5; küçük bir kısmı gerçekten iyi ya da gerçekten kötü. */
-    private double kaliteUret() {
+    private double generateQuality() {
         double u = rnd.nextDouble();
         if (u < 0.07) return 2.0 + rnd.nextDouble() * 1.0;   // kötü
         if (u > 0.93) return 4.6 + rnd.nextDouble() * 0.4;   // çok iyi
@@ -405,73 +405,73 @@ public class MockDataSeeder implements CommandLineRunner {
     }
 
     /** Uzun kuyruk: çoğu yemek az puan alır, birkaçı çok. */
-    private int populerlikUret(double ortalama) {
+    private int generatePopularity(double average) {
         double u = rnd.nextDouble();
-        double carpan = u < 0.70 ? 0.25          // çoğunluk
+        double factor = u < 0.70 ? 0.25          // çoğunluk
                 : u < 0.95 ? 1.5                 // orta
                 : 6.0;                           // popüler azınlık
-        return (int) Math.round(ortalama * carpan * (0.5 + rnd.nextDouble()));
+        return (int) Math.round(average * factor * (0.5 + rnd.nextDouble()));
     }
 
-    private double yarimYildizaYuvarla(double ham) {
-        double sinirli = Math.max(0.5, Math.min(5.0, ham));
-        return Math.round(sinirli * 2) / 2.0;
+    private double roundToHalfStar(double raw) {
+        double clamped = Math.max(0.5, Math.min(5.0, raw));
+        return Math.round(clamped * 2) / 2.0;
     }
 
-    private String yorumUret(double skor) {
-        String[] havuz = skor >= 4.5 ? YORUM_IYI : skor >= 3.0 ? YORUM_ORTA : YORUM_KOTU;
-        return havuz[rnd.nextInt(havuz.length)];
+    private String generateComment(double score) {
+        String[] pool = score >= 4.5 ? COMMENTS_GOOD : score >= 3.0 ? COMMENTS_AVERAGE : COMMENTS_BAD;
+        return pool[rnd.nextInt(pool.length)];
     }
 
     // ── Ad üretimi ────────────────────────────────────────────────────────────
 
-    private String benzersizAd(String kategori, String ilce, Set<String> kullanilan) {
-        String[] turler = TUR.get(kategori);
-        for (int deneme = 0; deneme < 40; deneme++) {
-            String on = rnd.nextBoolean() ? ilce : ON_EK[rnd.nextInt(ON_EK.length)];
-            String ad = on + " " + turler[rnd.nextInt(turler.length)];
-            if (kullanilan.add(ad)) return ad;
+    private String uniqueName(String category, String district, Set<String> used) {
+        String[] cuisines = CUISINE_NAMES.get(category);
+        for (int attempt = 0; attempt < 40; attempt++) {
+            String on = rnd.nextBoolean() ? district : PREFIXES[rnd.nextInt(PREFIXES.length)];
+            String name = on + " " + cuisines[rnd.nextInt(cuisines.length)];
+            if (used.add(name)) return name;
         }
-        String ad = ilce + " " + turler[0] + " " + (kullanilan.size() + 1);
-        kullanilan.add(ad);
-        return ad;
+        String name = district + " " + cuisines[0] + " " + (used.size() + 1);
+        used.add(name);
+        return name;
     }
 
     /** Merkez ilçeler daha yoğun — gerçek dağılıma benzesin. */
-    private int agirlikliIlce() {
+    private int weightedDistrict() {
         double u = rnd.nextDouble();
         if (u < 0.45) return rnd.nextInt(5);        // ilk 5 ilçe: merkez
         if (u < 0.80) return 5 + rnd.nextInt(6);
-        return 11 + rnd.nextInt(ILCELER.length - 11);
+        return 11 + rnd.nextInt(DISTRICTS.length - 11);
     }
 
     // ── Sabitler ──────────────────────────────────────────────────────────────
 
-    private record Ilce(String ad, double lat, double lng) {}
+    private record District(String name, double lat, double lng) {}
 
-    private static final Ilce[] ILCELER = {
-            new Ilce("Kadıköy", 40.9903, 29.0270), new Ilce("Beşiktaş", 41.0430, 29.0090),
-            new Ilce("Şişli", 41.0602, 28.9877), new Ilce("Beyoğlu", 41.0350, 28.9770),
-            new Ilce("Üsküdar", 41.0233, 29.0152), new Ilce("Fatih", 41.0186, 28.9400),
-            new Ilce("Bakırköy", 40.9820, 28.8720), new Ilce("Ataşehir", 40.9920, 29.1270),
-            new Ilce("Maltepe", 40.9350, 29.1300), new Ilce("Sarıyer", 41.1670, 29.0580),
-            new Ilce("Zeytinburnu", 40.9920, 28.9020), new Ilce("Bağcılar", 41.0353, 28.8560),
-            new Ilce("Kartal", 40.8870, 29.1900), new Ilce("Pendik", 40.8770, 29.2330),
-            new Ilce("Eyüpsultan", 41.0480, 28.9330), new Ilce("Güngören", 41.0200, 28.8760),
-            new Ilce("Beylikdüzü", 41.0010, 28.6410), new Ilce("Esenyurt", 41.0340, 28.6800),
+    private static final District[] DISTRICTS = {
+            new District("Kadıköy", 40.9903, 29.0270), new District("Beşiktaş", 41.0430, 29.0090),
+            new District("Şişli", 41.0602, 28.9877), new District("Beyoğlu", 41.0350, 28.9770),
+            new District("Üsküdar", 41.0233, 29.0152), new District("Fatih", 41.0186, 28.9400),
+            new District("Bakırköy", 40.9820, 28.8720), new District("Ataşehir", 40.9920, 29.1270),
+            new District("Maltepe", 40.9350, 29.1300), new District("Sarıyer", 41.1670, 29.0580),
+            new District("Zeytinburnu", 40.9920, 28.9020), new District("Bağcılar", 41.0353, 28.8560),
+            new District("Kartal", 40.8870, 29.1900), new District("Pendik", 40.8770, 29.2330),
+            new District("Eyüpsultan", 41.0480, 28.9330), new District("Güngören", 41.0200, 28.8760),
+            new District("Beylikdüzü", 41.0010, 28.6410), new District("Esenyurt", 41.0340, 28.6800),
     };
 
-    private static final String[] KATEGORILER = {
+    private static final String[] CATEGORIES = {
             "Burger", "Pizza", "Türk Mutfağı", "Ev Yemeği", "Sushi", "Tatlı", "Kahvaltı",
             "İtalyan", "Vegan", "Meze", "Noodle", "Tavuk", "Sandviç"};
 
-    private static final String[] YAN_KATEGORILER = {"Tatlı", "Vegan", "Sandviç"};
+    private static final String[] SIDE_CATEGORIES = {"Tatlı", "Vegan", "Sandviç"};
 
-    private static final String[] ON_EK = {
+    private static final String[] PREFIXES = {
             "Mavi", "Köşe", "Sokak", "Liman", "Bereket", "Keyif", "Nar", "Zeytin",
             "Ustam", "Dede", "Çınar", "Sahil", "Kubbe", "Lezzet", "Meydan", "Fırın"};
 
-    private static final Map<String, String[]> TUR = Map.ofEntries(
+    private static final Map<String, String[]> CUISINE_NAMES = Map.ofEntries(
             Map.entry("Burger", new String[]{"Burger Evi", "Burger House", "Smash Co.", "Grill Bar"}),
             Map.entry("Pizza", new String[]{"Pizzeria", "Forno", "Pizza Evi"}),
             Map.entry("Türk Mutfağı", new String[]{"Ocakbaşı", "Kebap Salonu", "Döner Evi", "Kebapçı", "Pide Salonu"}),
@@ -488,11 +488,11 @@ public class MockDataSeeder implements CommandLineRunner {
 
     /**
      * Kategori → yemekler. Her yemek yalnızca bir kategoride durur; mevcut
-     * verinin kategorisi de bu tabloya göre düzeltilir ({@link #senkronla()}).
+     * verinin kategorisi de bu tabloya göre düzeltilir ({@link #sync()}).
      * Fotoğraflar yemek adıyla eşleşir: yeni yemek eklersen
-     * {@code mock/yemek-fotograflari.json}'a da ekle.
+     * {@code mock/dish-photos.json}'a da ekle.
      */
-    private static final Map<String, String[]> YEMEKLER = Map.ofEntries(
+    private static final Map<String, String[]> DISHES = Map.ofEntries(
             Map.entry("Burger", new String[]{"Smash Burger", "Cheeseburger", "Double Cheddar",
                     "Tavuklu Burger", "Mantarlı Burger", "Acılı Burger", "Patates Kızartması",
                     "Soğan Halkası", "Trüflü Patates"}),
@@ -527,20 +527,20 @@ public class MockDataSeeder implements CommandLineRunner {
                     "Tavuklu Wrap", "Falafel Dürüm", "Kaşarlı Tost"}));
 
     /** Yemek adı → kategori (YEMEKLER'in tersi). */
-    private static final Map<String, String> YEMEK_KATEGORISI = new HashMap<>();
+    private static final Map<String, String> DISH_CATEGORY = new HashMap<>();
 
     static {
-        YEMEKLER.forEach((kategori, yemekler) -> {
-            for (String y : yemekler) {
-                String onceki = YEMEK_KATEGORISI.put(y, kategori);
-                if (onceki != null) {
-                    throw new IllegalStateException(y + " iki kategoride: " + onceki + ", " + kategori);
+        DISHES.forEach((category, dishes) -> {
+            for (String y : dishes) {
+                String previous = DISH_CATEGORY.put(y, category);
+                if (previous != null) {
+                    throw new IllegalStateException(y + " iki kategoride: " + previous + ", " + category);
                 }
             }
         });
     }
 
-    private static final Map<String, int[]> FIYAT = Map.ofEntries(
+    private static final Map<String, int[]> PRICE_RANGES = Map.ofEntries(
             Map.entry("Burger", new int[]{180, 520}), Map.entry("Pizza", new int[]{200, 480}),
             Map.entry("Türk Mutfağı", new int[]{120, 550}), Map.entry("Ev Yemeği", new int[]{90, 320}),
             Map.entry("Sushi", new int[]{280, 1200}),
@@ -549,28 +549,28 @@ public class MockDataSeeder implements CommandLineRunner {
             Map.entry("Meze", new int[]{70, 280}), Map.entry("Noodle", new int[]{200, 420}),
             Map.entry("Tavuk", new int[]{150, 380}), Map.entry("Sandviç", new int[]{80, 260}));
 
-    private static final String[] AD = {"Ahmet", "Ayşe", "Mehmet", "Elif", "Mustafa", "Zeynep",
+    private static final String[] FIRST_NAMES = {"Ahmet", "Ayşe", "Mehmet", "Elif", "Mustafa", "Zeynep",
             "Emre", "Fatma", "Burak", "Merve", "Can", "Selin", "Kerem", "Deniz", "Okan", "Ece",
             "Serkan", "Buse", "Onur", "İrem", "Tolga", "Ceren", "Barış", "Gizem"};
-    private static final String[] SOYAD = {"Yılmaz", "Kaya", "Demir", "Şahin", "Çelik", "Yıldız",
+    private static final String[] LAST_NAMES = {"Yılmaz", "Kaya", "Demir", "Şahin", "Çelik", "Yıldız",
             "Yıldırım", "Öztürk", "Aydın", "Özdemir", "Arslan", "Doğan", "Kılıç", "Aslan", "Çetin"};
 
-    private static final String[] MAHALLE = {"Caferağa", "Osmanağa", "Rasimpaşa", "Sinanpaşa",
+    private static final String[] NEIGHBORHOODS = {"Caferağa", "Osmanağa", "Rasimpaşa", "Sinanpaşa",
             "Levent", "Etiler", "Cihangir", "Galata", "Moda", "Fenerbahçe", "Acıbadem", "Koşuyolu"};
-    private static final String[] CADDE = {"Bağdat Cad.", "İstiklal Cad.", "Bahariye Cad.",
+    private static final String[] STREETS = {"Bağdat Cad.", "İstiklal Cad.", "Bahariye Cad.",
             "Halaskargazi Cad.", "Nispetiye Cad.", "Rumeli Cad.", "Moda Cad.", "Sahil Yolu"};
 
-    private static final String[] YORUM_IYI = {
+    private static final String[] COMMENTS_GOOD = {
             "Beklediğimden çok daha iyiydi, kesinlikle tekrar geleceğim.",
             "Porsiyon doyurucu, lezzet tam kıvamında.",
             "Buranın en iyi işi bu bence.", "Arkadaşlara da önerdim, hepsi beğendi.",
             "Fiyatına göre gerçekten başarılı.", "Sıcacık geldi, sunumu da güzeldi."};
-    private static final String[] YORUM_ORTA = {
+    private static final String[] COMMENTS_AVERAGE = {
             "Fena değil ama bir daha söyler miyim bilmem.",
             "Lezzet iyiydi, porsiyon biraz küçük geldi.",
             "Ortalama. Beklentimi karşıladı sayılır.",
             "İyiydi ama fiyatı biraz yüksek.", "Gayet standart, sürprizi yok."};
-    private static final String[] YORUM_KOTU = {
+    private static final String[] COMMENTS_BAD = {
             "Maalesef beğenmedim, soğuk geldi.",
             "Fiyatına göre kesinlikle değmez.",
             "Tadı beklediğim gibi değildi.", "Bir daha denemem açıkçası."};
