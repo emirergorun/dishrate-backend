@@ -328,15 +328,10 @@ public class MockDataSeeder implements CommandLineRunner {
             String name = pool[rnd.nextInt(pool.length)];
             if (!names.add(name)) continue;              // aynı restoranda tekrar etmesin
 
-            int[] range = PRICE_RANGES.get(category);
-            int price = range[0] + rnd.nextInt(range[1] - range[0] + 1);
-            price = (price / 5) * 5;                   // 5'in katına yuvarla
-
             dishes.add(MenuItem.builder()
                     .restaurant(restaurant)
                     .category(categories.get(category))
                     .name(name)
-                    .price(BigDecimal.valueOf(price))
                     .photoUrl(photos.pick(name, rnd.nextInt(1_000)))
                     .averageRating(BigDecimal.ZERO)
                     .ratingCount(0)
@@ -539,15 +534,6 @@ public class MockDataSeeder implements CommandLineRunner {
             }
         });
     }
-
-    private static final Map<String, int[]> PRICE_RANGES = Map.ofEntries(
-            Map.entry("Burger", new int[]{180, 520}), Map.entry("Pizza", new int[]{200, 480}),
-            Map.entry("Türk Mutfağı", new int[]{120, 550}), Map.entry("Ev Yemeği", new int[]{90, 320}),
-            Map.entry("Sushi", new int[]{280, 1200}),
-            Map.entry("Tatlı", new int[]{80, 260}), Map.entry("Kahvaltı", new int[]{90, 650}),
-            Map.entry("İtalyan", new int[]{220, 560}), Map.entry("Vegan", new int[]{120, 320}),
-            Map.entry("Meze", new int[]{70, 280}), Map.entry("Noodle", new int[]{200, 420}),
-            Map.entry("Tavuk", new int[]{150, 380}), Map.entry("Sandviç", new int[]{80, 260}));
 
     private static final String[] FIRST_NAMES = {"Ahmet", "Ayşe", "Mehmet", "Elif", "Mustafa", "Zeynep",
             "Emre", "Fatma", "Burak", "Merve", "Can", "Selin", "Kerem", "Deniz", "Okan", "Ece",

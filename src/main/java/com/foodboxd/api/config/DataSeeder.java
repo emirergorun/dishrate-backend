@@ -86,152 +86,152 @@ public class DataSeeder implements CommandLineRunner {
         // ── Burger ──
         Restaurant r;
         r = restaurant("Bun Lab", "İstanbul", "Kadıköy", "Moda Cad. No:5, Kadıköy", 40.9907, 29.0262);
-        item(r, "Burger", "Double Smash", 395, 4.9, BURGER2);
-        item(r, "Burger", "Crispy Chicken Burger", 340, 4.7, BURGER1);
-        item(r, "Burger", "Loaded Fries", 180, 4.6, FRIES);
-        item(r, "Tatlı", "Oreo Shake", 150, 4.5, DESSERT);
+        item(r, "Burger", "Double Smash", 4.9, BURGER2);
+        item(r, "Burger", "Crispy Chicken Burger", 4.7, BURGER1);
+        item(r, "Burger", "Loaded Fries", 4.6, FRIES);
+        item(r, "Tatlı", "Oreo Shake", 4.5, DESSERT);
 
         r = restaurant("Smoke & Grill", "İstanbul", "Şişli", "Halaskargazi Cad. No:21, Şişli", 41.0602, 28.9877);
-        item(r, "Burger", "Triple Smash", 420, 4.9, BURGER3);
-        item(r, "Burger", "BBQ Bacon Burger", 380, 4.8, BURGER1);
-        item(r, "Burger", "Smoke Ribs", 550, 4.7, BURGER4);
-        item(r, "Burger", "Peynirli Patates", 160, 4.6, FRIES);
+        item(r, "Burger", "Triple Smash", 4.9, BURGER3);
+        item(r, "Burger", "BBQ Bacon Burger", 4.8, BURGER1);
+        item(r, "Burger", "Smoke Ribs", 4.7, BURGER4);
+        item(r, "Burger", "Peynirli Patates", 4.6, FRIES);
 
         r = restaurant("The Fat Cow", "İstanbul", "Bebek", "Bebek Cad. No:14, Bebek", 41.0774, 29.0396);
-        item(r, "Burger", "Wagyu Burger", 650, 4.8, BURGER4);
-        item(r, "Burger", "Truffle Fries", 220, 4.9, FRIES);
-        item(r, "Vegan", "Burrata Salatası", 280, 4.7, VEGAN1);
-        item(r, "Tatlı", "Çikolata Fondanı", 190, 4.6, DESSERT);
+        item(r, "Burger", "Wagyu Burger", 4.8, BURGER4);
+        item(r, "Burger", "Truffle Fries", 4.9, FRIES);
+        item(r, "Vegan", "Burrata Salatası", 4.7, VEGAN1);
+        item(r, "Tatlı", "Çikolata Fondanı", 4.6, DESSERT);
 
         r = restaurant("Burger Joint", "İstanbul", "Beşiktaş", "Sinanpaşa Mah. No:8, Beşiktaş", 41.0422, 29.0056);
-        item(r, "Burger", "Smash Burger", 320, 4.7, BURGER1);
-        item(r, "Burger", "Jalapeno Burger", 350, 4.6, BURGER2);
-        item(r, "Burger", "Mushroom Swiss Burger", 360, 4.5, BURGER3);
-        item(r, "Burger", "Sweet Potato Fries", 140, 4.4, FRIES);
+        item(r, "Burger", "Smash Burger", 4.7, BURGER1);
+        item(r, "Burger", "Jalapeno Burger", 4.6, BURGER2);
+        item(r, "Burger", "Mushroom Swiss Burger", 4.5, BURGER3);
+        item(r, "Burger", "Sweet Potato Fries", 4.4, FRIES);
 
         // ── Pizza ──
         r = restaurant("Forno di Napoli", "İstanbul", "Galata", "Galata Kulesi Sok. No:3, Beyoğlu", 41.0256, 28.9744);
-        item(r, "Pizza", "Pepperoni Calzone", 380, 4.7, PIZZA2);
-        item(r, "Pizza", "Margherita DOC", 320, 4.8, PIZZA1);
-        item(r, "Pizza", "Quattro Formaggi", 360, 4.6, PIZZA1);
-        item(r, "Tatlı", "Tiramisu", 180, 4.9, DESSERT);
+        item(r, "Pizza", "Pepperoni Calzone", 4.7, PIZZA2);
+        item(r, "Pizza", "Margherita DOC", 4.8, PIZZA1);
+        item(r, "Pizza", "Quattro Formaggi", 4.6, PIZZA1);
+        item(r, "Tatlı", "Tiramisu", 4.9, DESSERT);
 
         r = restaurant("Pizza Napoli", "İstanbul", "Nişantaşı", "Abdi İpekçi Cad. No:44, Nişantaşı", 41.0503, 28.9998);
-        item(r, "Pizza", "Diavola", 350, 4.7, PIZZA1);
-        item(r, "Pizza", "Prosciutto e Funghi", 370, 4.6, PIZZA2);
-        item(r, "İtalyan", "Burrata Bruschetta", 220, 4.5, VEGAN1);
-        item(r, "Tatlı", "Panna Cotta", 160, 4.4, DESSERT);
+        item(r, "Pizza", "Diavola", 4.7, PIZZA1);
+        item(r, "Pizza", "Prosciutto e Funghi", 4.6, PIZZA2);
+        item(r, "İtalyan", "Burrata Bruschetta", 4.5, VEGAN1);
+        item(r, "Tatlı", "Panna Cotta", 4.4, DESSERT);
 
         // ── Sushi ──
         r = restaurant("Sushi Kaito", "İstanbul", "Nişantaşı", "Teşvikiye Cad. No:18, Nişantaşı", 41.0492, 29.0008);
-        item(r, "Sushi", "Omakase Set (10 pcs)", 1200, 5.0, SUSHI2);
-        item(r, "Sushi", "Salmon Nigiri (8 adet)", 480, 4.8, SUSHI1);
-        item(r, "Sushi", "Dragon Roll", 520, 4.9, SUSHI1);
-        item(r, "Noodle", "Miso Çorbası", 120, 4.5, VEGAN2);
+        item(r, "Sushi", "Omakase Set (10 pcs)", 5.0, SUSHI2);
+        item(r, "Sushi", "Salmon Nigiri (8 adet)", 4.8, SUSHI1);
+        item(r, "Sushi", "Dragon Roll", 4.9, SUSHI1);
+        item(r, "Noodle", "Miso Çorbası", 4.5, VEGAN2);
 
         r = restaurant("Nobu Istanbul", "İstanbul", "Etiler", "Nispetiye Cad. No:76, Etiler", 41.0794, 29.0235);
-        item(r, "Sushi", "Tuna Tataki", 480, 4.6, SUSHI1);
-        item(r, "Sushi", "Black Cod Miso", 750, 4.9, SUSHI2);
-        item(r, "Sushi", "Yellowtail Jalapeño", 620, 4.8, SUSHI1);
-        item(r, "Sushi", "Wagyu Gyoza", 560, 4.7, SUSHI2);
+        item(r, "Sushi", "Tuna Tataki", 4.6, SUSHI1);
+        item(r, "Sushi", "Black Cod Miso", 4.9, SUSHI2);
+        item(r, "Sushi", "Yellowtail Jalapeño", 4.8, SUSHI1);
+        item(r, "Sushi", "Wagyu Gyoza", 4.7, SUSHI2);
 
         // ── Türk Mutfağı ──
         r = restaurant("Ocakbaşı 1969", "İstanbul", "Karaköy", "Kemankeş Cad. No:11, Karaköy", 41.0231, 28.9766);
-        item(r, "Türk Mutfağı", "Adana Kebap", 350, 4.8, KEBAB1);
-        item(r, "Türk Mutfağı", "Urfa Kebap", 340, 4.7, KEBAB1);
-        item(r, "Türk Mutfağı", "Kuzu Şiş", 420, 4.9, KEBAB1);
-        item(r, "Türk Mutfağı", "Patlıcan Kebabı", 380, 4.6, KEBAB1);
+        item(r, "Türk Mutfağı", "Adana Kebap", 4.8, KEBAB1);
+        item(r, "Türk Mutfağı", "Urfa Kebap", 4.7, KEBAB1);
+        item(r, "Türk Mutfağı", "Kuzu Şiş", 4.9, KEBAB1);
+        item(r, "Türk Mutfağı", "Patlıcan Kebabı", 4.6, KEBAB1);
 
         r = restaurant("Karadeniz Döner", "İstanbul", "Beşiktaş", "Barbaros Blv. No:3, Beşiktaş", 41.0430, 29.0030);
-        item(r, "Türk Mutfağı", "Dürüm Döner", 120, 4.5, KEBAB2);
-        item(r, "Türk Mutfağı", "Ekmek Arası Döner", 100, 4.4, KEBAB2);
-        item(r, "Türk Mutfağı", "Yarım Porsiyon", 80, 4.3, KEBAB2);
-        item(r, "Tavuk", "Tavuk Dürüm", 110, 4.4, CHICKEN);
+        item(r, "Türk Mutfağı", "Dürüm Döner", 4.5, KEBAB2);
+        item(r, "Türk Mutfağı", "Ekmek Arası Döner", 4.4, KEBAB2);
+        item(r, "Türk Mutfağı", "Yarım Porsiyon", 4.3, KEBAB2);
+        item(r, "Tavuk", "Tavuk Dürüm", 4.4, CHICKEN);
 
         r = restaurant("Mersin Tantunisi", "İstanbul", "Bağcılar", "Fevzi Paşa Cad. No:55, Bağcılar", 41.0353, 28.8560);
-        item(r, "Türk Mutfağı", "Tantuni", 180, 4.9, KEBAB2);
-        item(r, "Türk Mutfağı", "Dürüm Tantuni", 200, 4.8, KEBAB2);
-        item(r, "Türk Mutfağı", "Acılı Tantuni", 190, 4.7, KEBAB1);
-        item(r, "Vegan", "Şalgam Suyu", 30, 4.5, VEGAN2);
+        item(r, "Türk Mutfağı", "Tantuni", 4.9, KEBAB2);
+        item(r, "Türk Mutfağı", "Dürüm Tantuni", 4.8, KEBAB2);
+        item(r, "Türk Mutfağı", "Acılı Tantuni", 4.7, KEBAB1);
+        item(r, "Vegan", "Şalgam Suyu", 4.5, VEGAN2);
 
         // ── Tavuk ──
         r = restaurant("Tavukçu Mehmet", "İstanbul", "Kadıköy", "Söğütlüçeşme Cad. No:22, Kadıköy", 40.9920, 29.0284);
-        item(r, "Tavuk", "Izgara Tavuk", 280, 4.7, CHICKEN);
-        item(r, "Tavuk", "Tavuk Şiş", 260, 4.6, CHICKEN);
-        item(r, "Tavuk", "Kanat (8 adet)", 240, 4.8, CHICKEN);
-        item(r, "Tavuk", "Pilav Üstü Tavuk", 220, 4.5, CHICKEN);
+        item(r, "Tavuk", "Izgara Tavuk", 4.7, CHICKEN);
+        item(r, "Tavuk", "Tavuk Şiş", 4.6, CHICKEN);
+        item(r, "Tavuk", "Kanat (8 adet)", 4.8, CHICKEN);
+        item(r, "Tavuk", "Pilav Üstü Tavuk", 4.5, CHICKEN);
 
         r = restaurant("Pilav Evi", "İstanbul", "Fatih", "Millet Cad. No:9, Fatih", 41.0198, 28.9397);
-        item(r, "Tavuk", "Tavuklu Pilav", 130, 4.6, CHICKEN);
-        item(r, "Tavuk", "İzgara + Pilav", 200, 4.5, CHICKEN);
-        item(r, "Vegan", "Mercimek Çorbası", 80, 4.8, VEGAN2);
-        item(r, "Tatlı", "Sütlaç", 90, 4.7, DESSERT);
+        item(r, "Tavuk", "Tavuklu Pilav", 4.6, CHICKEN);
+        item(r, "Tavuk", "İzgara + Pilav", 4.5, CHICKEN);
+        item(r, "Vegan", "Mercimek Çorbası", 4.8, VEGAN2);
+        item(r, "Tatlı", "Sütlaç", 4.7, DESSERT);
 
         // ── Kahvaltı ──
         r = restaurant("Sunday Brunch", "İstanbul", "Moda", "Moda Cad. No:42, Kadıköy", 40.9877, 29.0290);
-        item(r, "Kahvaltı", "Eggs Benedict", 290, 4.7, BREAKFAST1);
-        item(r, "Kahvaltı", "Avocado Toast", 220, 4.5, BREAKFAST2);
-        item(r, "Tatlı", "French Pancakes", 250, 4.8, DESSERT);
-        item(r, "Kahvaltı", "Granola Bowl", 200, 4.4, VEGAN1);
+        item(r, "Kahvaltı", "Eggs Benedict", 4.7, BREAKFAST1);
+        item(r, "Kahvaltı", "Avocado Toast", 4.5, BREAKFAST2);
+        item(r, "Tatlı", "French Pancakes", 4.8, DESSERT);
+        item(r, "Kahvaltı", "Granola Bowl", 4.4, VEGAN1);
 
         r = restaurant("Gözlemeci Hanım", "İstanbul", "Üsküdar", "Hakimiyeti Milliye Cad. No:7, Üsküdar", 41.0234, 29.0152);
-        item(r, "Kahvaltı", "Karışık Gözleme", 95, 4.7, BREAKFAST1);
-        item(r, "Kahvaltı", "Peynirli Gözleme", 80, 4.6, BREAKFAST1);
-        item(r, "Vegan", "Ispanaklı Gözleme", 85, 4.5, VEGAN1);
-        item(r, "Kahvaltı", "Çay", 15, 4.9, BREAKFAST2);
+        item(r, "Kahvaltı", "Karışık Gözleme", 4.7, BREAKFAST1);
+        item(r, "Kahvaltı", "Peynirli Gözleme", 4.6, BREAKFAST1);
+        item(r, "Vegan", "Ispanaklı Gözleme", 4.5, VEGAN1);
+        item(r, "Kahvaltı", "Çay", 4.9, BREAKFAST2);
 
         // ── Tatlı ──
         r = restaurant("Güllüoğlu", "İstanbul", "Karaköy", "Rıhtım Cad. No:3, Karaköy", 41.0240, 28.9770);
-        item(r, "Tatlı", "Fıstıklı Baklava", 120, 4.9, DESSERT);
-        item(r, "Tatlı", "Sütlü Nuriye", 100, 4.8, DESSERT);
-        item(r, "Tatlı", "Cevizli Baklava", 110, 4.7, DESSERT);
-        item(r, "Tatlı", "Burma Kadayıf", 115, 4.8, DESSERT);
+        item(r, "Tatlı", "Fıstıklı Baklava", 4.9, DESSERT);
+        item(r, "Tatlı", "Sütlü Nuriye", 4.8, DESSERT);
+        item(r, "Tatlı", "Cevizli Baklava", 4.7, DESSERT);
+        item(r, "Tatlı", "Burma Kadayıf", 4.8, DESSERT);
 
         r = restaurant("Şanlıurfa Sofrası", "İstanbul", "Fatih", "Ordu Cad. No:12, Fatih", 41.0188, 28.9410);
-        item(r, "Tatlı", "Künefe", 180, 4.9, DESSERT);
-        item(r, "Tatlı", "Sütlü Künefe", 190, 4.8, DESSERT);
-        item(r, "Türk Mutfağı", "Adana Kebap", 320, 4.7, KEBAB1);
-        item(r, "Vegan", "Ayran", 25, 4.5, VEGAN2);
+        item(r, "Tatlı", "Künefe", 4.9, DESSERT);
+        item(r, "Tatlı", "Sütlü Künefe", 4.8, DESSERT);
+        item(r, "Türk Mutfağı", "Adana Kebap", 4.7, KEBAB1);
+        item(r, "Vegan", "Ayran", 4.5, VEGAN2);
 
         // ── İtalyan ──
         r = restaurant("La Cucina", "İstanbul", "Cihangir", "Cihangir Cad. No:29, Beyoğlu", 41.0330, 28.9820);
-        item(r, "İtalyan", "Truffle Risotto", 520, 4.8, ITALIAN2);
-        item(r, "İtalyan", "Truffle Carbonara", 460, 4.8, ITALIAN1);
-        item(r, "İtalyan", "Burrata & Pomodoro", 380, 4.7, VEGAN1);
-        item(r, "Tatlı", "Tiramisu della Casa", 240, 4.9, DESSERT);
+        item(r, "İtalyan", "Truffle Risotto", 4.8, ITALIAN2);
+        item(r, "İtalyan", "Truffle Carbonara", 4.8, ITALIAN1);
+        item(r, "İtalyan", "Burrata & Pomodoro", 4.7, VEGAN1);
+        item(r, "Tatlı", "Tiramisu della Casa", 4.9, DESSERT);
 
         // ── Noodle ──
         r = restaurant("Noodle Bar", "İstanbul", "Karaköy", "Tersane Cad. No:6, Karaköy", 41.0215, 28.9758);
-        item(r, "Noodle", "Ramen", 320, 4.8, NOODLE);
-        item(r, "Noodle", "Spicy Miso Ramen", 340, 4.7, NOODLE);
-        item(r, "Noodle", "Pad Thai", 300, 4.6, NOODLE);
-        item(r, "Noodle", "Gyoza (6 adet)", 180, 4.5, SUSHI1);
+        item(r, "Noodle", "Ramen", 4.8, NOODLE);
+        item(r, "Noodle", "Spicy Miso Ramen", 4.7, NOODLE);
+        item(r, "Noodle", "Pad Thai", 4.6, NOODLE);
+        item(r, "Noodle", "Gyoza (6 adet)", 4.5, SUSHI1);
 
         // ── Vegan ──
         r = restaurant("Green Bowl", "İstanbul", "Nişantaşı", "Maçka Cad. No:15, Nişantaşı", 41.0490, 28.9988);
-        item(r, "Vegan", "Quinoa Power Bowl", 280, 4.6, VEGAN1);
-        item(r, "Vegan", "Açık Avocado Sandviç", 220, 4.5, BREAKFAST2);
-        item(r, "Vegan", "Mercimek Köftesi", 160, 4.7, VEGAN2);
-        item(r, "Vegan", "Chia Pudding", 140, 4.4, DESSERT);
+        item(r, "Vegan", "Quinoa Power Bowl", 4.6, VEGAN1);
+        item(r, "Vegan", "Açık Avocado Sandviç", 4.5, BREAKFAST2);
+        item(r, "Vegan", "Mercimek Köftesi", 4.7, VEGAN2);
+        item(r, "Vegan", "Chia Pudding", 4.4, DESSERT);
 
         r = restaurant("Earthly Kitchen", "İstanbul", "Beyoğlu", "İstiklal Cad. No:82, Beyoğlu", 41.0357, 28.9769);
-        item(r, "Vegan", "Vegan Burger", 260, 4.5, BURGER1);
-        item(r, "Vegan", "Buddha Bowl", 290, 4.6, VEGAN1);
-        item(r, "Vegan", "Falafel Tabağı", 200, 4.7, VEGAN2);
-        item(r, "Vegan", "Raw Cheesecake", 170, 4.4, DESSERT);
+        item(r, "Vegan", "Vegan Burger", 4.5, BURGER1);
+        item(r, "Vegan", "Buddha Bowl", 4.6, VEGAN1);
+        item(r, "Vegan", "Falafel Tabağı", 4.7, VEGAN2);
+        item(r, "Vegan", "Raw Cheesecake", 4.4, DESSERT);
 
         // ── Meze ──
         r = restaurant("Sahil Meyhane", "İstanbul", "Ortaköy", "Muallim Naci Cad. No:4, Ortaköy", 41.0530, 29.0289);
-        item(r, "Meze", "Midye Dolma (12 adet)", 250, 4.7, SUSHI1);
-        item(r, "Meze", "Enginar Zeytinyağlı", 180, 4.6, VEGAN1);
-        item(r, "Meze", "Balık Tava", 420, 4.8, SUSHI2);
-        item(r, "Meze", "Cacık", 90, 4.5, VEGAN2);
+        item(r, "Meze", "Midye Dolma (12 adet)", 4.7, SUSHI1);
+        item(r, "Meze", "Enginar Zeytinyağlı", 4.6, VEGAN1);
+        item(r, "Meze", "Balık Tava", 4.8, SUSHI2);
+        item(r, "Meze", "Cacık", 4.5, VEGAN2);
 
         r = restaurant("Kırım Mutfağı", "İstanbul", "Sarıyer", "Büyükdere Cad. No:33, Sarıyer", 41.1668, 29.0582);
-        item(r, "Meze", "Çiğ Börek", 140, 4.8, BREAKFAST1);
-        item(r, "Meze", "Çerkes Tavuğu", 280, 4.7, CHICKEN);
-        item(r, "Meze", "Hamur Kızartması", 120, 4.6, BREAKFAST2);
-        item(r, "Meze", "Elma Kompostosu", 60, 4.4, DESSERT);
+        item(r, "Meze", "Çiğ Börek", 4.8, BREAKFAST1);
+        item(r, "Meze", "Çerkes Tavuğu", 4.7, CHICKEN);
+        item(r, "Meze", "Hamur Kızartması", 4.6, BREAKFAST2);
+        item(r, "Meze", "Elma Kompostosu", 4.4, DESSERT);
 
         log.info("Tohumlama tamamlandı: {} restoran, {} menü öğesi.",
                 restaurantRepository.count(), menuItemRepository.count());
@@ -255,12 +255,11 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private void item(Restaurant restaurant, String categoryName, String name,
-                      double price, double rating, String photoUrl) {
+                      double rating, String photoUrl) {
         menuItemRepository.save(MenuItem.builder()
                 .restaurant(restaurant)
                 .category(categories.get(categoryName))
                 .name(name)
-                .price(BigDecimal.valueOf(price))
                 .averageRating(BigDecimal.valueOf(rating))
                 .photoUrl(photoUrl)
                 .build());
