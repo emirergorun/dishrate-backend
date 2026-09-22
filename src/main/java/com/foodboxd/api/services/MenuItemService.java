@@ -86,7 +86,6 @@ public class MenuItemService {
                 .restaurant(restaurant)
                 .category(category)
                 .name(request.getName())
-                .price(request.getPrice())
                 .photoUrl(request.getPhotoUrl())
                 .build();
 
@@ -170,9 +169,6 @@ public class MenuItemService {
         if (request.getName() != null && !request.getName().isBlank()) {
             menuItem.setName(request.getName().trim());
         }
-        if (request.getPrice() != null) {
-            menuItem.setPrice(request.getPrice());
-        }
         if (request.getPhotoUrl() != null) {
             menuItem.setPhotoUrl(request.getPhotoUrl());
         }
@@ -244,7 +240,6 @@ public class MenuItemService {
         return MenuItemResponse.builder()
                 .menuItemId(menuItem.getMenuItemId())
                 .name(menuItem.getName())
-                .price(menuItem.getPrice())
                 .averageRating(menuItem.getAverageRating())
                 .ratingCount(menuItem.getRatingCount() == null ? 0 : menuItem.getRatingCount())
                 .photoUrl(menuItem.getPhotoUrl())

@@ -15,9 +15,6 @@ public class UpdateMenuItemRequest {
     @Size(max = 255, message = "Ürün adı en fazla 255 karakter olabilir")
     private String name;
 
-    @DecimalMin(value = "0.0", message = "Fiyat 0'dan küçük olamaz")
-    private BigDecimal price;
-
     private String photoUrl;
 
     private Long categoryId;

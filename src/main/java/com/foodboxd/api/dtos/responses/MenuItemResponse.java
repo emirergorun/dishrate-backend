@@ -13,7 +13,6 @@ public class MenuItemResponse {
 
     private Long menuItemId;
     private String name;
-    private BigDecimal price;
     private BigDecimal averageRating;
     private int ratingCount;
     private String photoUrl;

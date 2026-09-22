@@ -33,9 +33,6 @@ public class MenuItem {
     @Column(name = "name", nullable = false, length = 255)
     private String name;
 
-    @Column(name = "price", precision = 10, scale = 2)
-    private BigDecimal price;
-
     @Column(name = "average_rating", precision = 3, scale = 2, columnDefinition = "DECIMAL(3,2) DEFAULT 0.0")
     @Builder.Default
     private BigDecimal averageRating = BigDecimal.ZERO;
