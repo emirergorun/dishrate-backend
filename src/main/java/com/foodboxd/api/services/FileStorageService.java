@@ -37,7 +37,7 @@ public class FileStorageService {
         try {
             Files.createDirectories(root);
         } catch (IOException e) {
-            throw new IllegalStateException("Upload klasörü oluşturulamadı: " + root, e);
+            throw new IllegalStateException("Yükleme klasörü oluşturulamadı: " + root, e);
         }
     }
 

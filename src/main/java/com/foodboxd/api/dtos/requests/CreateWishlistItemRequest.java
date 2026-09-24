@@ -11,6 +11,6 @@ public class CreateWishlistItemRequest {
     @NotNull(message = "Kullanıcı ID boş bırakılamaz")
     private Long userId;
 
-    @NotNull(message = "Menü ürünü ID boş bırakılamaz")
+    @NotNull(message = "Yemek ID boş bırakılamaz")
     private Long menuItemId;
 }

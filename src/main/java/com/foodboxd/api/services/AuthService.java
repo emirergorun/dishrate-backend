@@ -50,11 +50,10 @@ public class AuthService {
 
         User user = userRepository.findByEmail(identifier)
                 .or(() -> userRepository.findByUsername(identifier))
-                .orElseThrow(() -> new BadCredentialsException(
-                        "Kullanıcı adı/e-posta veya şifre hatalı"));
+                .orElseThrow(() -> new BadCredentialsException("Giriş bilgileri hatalı."));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-            throw new BadCredentialsException("Kullanıcı adı/e-posta veya şifre hatalı");
+            throw new BadCredentialsException("Giriş bilgileri hatalı.");
         }
 
         // Eski refresh token'ları sil (her cihazda tek aktif token)
@@ -82,11 +81,11 @@ public class AuthService {
         log.debug("Token refresh requested");
 
         RefreshToken refreshToken = refreshTokenRepository.findByToken(refreshTokenStr)
-                .orElseThrow(() -> new ResourceNotFoundException("Geçersiz refresh token"));
+                .orElseThrow(() -> new ResourceNotFoundException("Oturum geçersiz, tekrar giriş yap."));
 
         if (refreshToken.isExpired()) {
             refreshTokenRepository.delete(refreshToken);
-            throw new BadCredentialsException("Refresh token süresi dolmuş, lütfen tekrar giriş yapın");
+            throw new BadCredentialsException("Oturumunun süresi doldu, tekrar giriş yap.");
         }
 
         User user = refreshToken.getUser();

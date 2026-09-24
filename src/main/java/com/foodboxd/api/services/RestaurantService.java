@@ -43,7 +43,7 @@ public class RestaurantService {
         log.info("Create restaurant request. Name: {}", request.getName());
         Address address = addressRepository.findById(request.getAddressId())
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Address not found. ID: " + request.getAddressId()
+                        "Adres bulunamadı."
                 ));
 
         Restaurant restaurant = Restaurant.builder()
@@ -65,7 +65,7 @@ public class RestaurantService {
         log.debug("Fetching restaurant. ID: {}", restaurantId);
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Restaurant not found. ID: " + restaurantId
+                        "Restoran bulunamadı."
                 ));
         return toResponse(restaurant);
     }
@@ -123,7 +123,7 @@ public class RestaurantService {
                                                User currentUser) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Restaurant not found. ID: " + restaurantId));
+                        "Restoran bulunamadı."));
         assertCanManage(currentUser, restaurantId);
 
         if (request.getName() != null && !request.getName().isBlank()) {
@@ -164,7 +164,7 @@ public class RestaurantService {
         log.info("Delete restaurant request. ID: {}", restaurantId);
         if (!restaurantRepository.existsById(restaurantId)) {
             throw new ResourceNotFoundException(
-                    "Restaurant not found for deletion. ID: " + restaurantId
+                    "Restoran bulunamadı."
             );
         }
         assertCanManage(currentUser, restaurantId);
@@ -184,7 +184,7 @@ public class RestaurantService {
                 .map(r -> r.isOwnedBy(user.getUserId()))
                 .orElse(false);
         if (!owns) {
-            throw new AccessDeniedException("Bu restoran üzerinde yetkiniz yok.");
+            throw new AccessDeniedException("Bu restoran üzerinde yetkin yok.");
         }
     }
 

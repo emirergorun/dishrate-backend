@@ -12,7 +12,7 @@ import java.math.BigDecimal;
 @Setter
 public class UpdateMenuItemRequest {
 
-    @Size(max = 255, message = "Ürün adı en fazla 255 karakter olabilir")
+    @Size(max = 255, message = "Yemek adı en fazla 255 karakter olabilir")
     private String name;
 
     private String photoUrl;

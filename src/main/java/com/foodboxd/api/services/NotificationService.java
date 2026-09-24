@@ -65,9 +65,9 @@ public class NotificationService {
     @Transactional
     public void markRead(Long id, User user) {
         AppNotification n = notificationRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Bildirim bulunamadı. ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Bildirim bulunamadı."));
         if (!n.getRecipient().getUserId().equals(user.getUserId())) {
-            throw new AccessDeniedException("Bu bildirim üzerinde yetkiniz yok.");
+            throw new AccessDeniedException("Bu bildirim üzerinde yetkin yok.");
         }
         n.setRead(true);
         notificationRepository.save(n);

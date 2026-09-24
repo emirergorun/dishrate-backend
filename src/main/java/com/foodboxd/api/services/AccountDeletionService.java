@@ -52,7 +52,7 @@ public class AccountDeletionService {
     public void deleteOwnAccount(User requester, String password) {
         Long userId = requester.getUserId();
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found. ID: " + userId));
+                .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı bulunamadı."));
 
         if (!passwordEncoder.matches(password, user.getPasswordHash())) {
             // 401 yerine 409: istemcinin 401 → token yenileme akışını tetiklemesin

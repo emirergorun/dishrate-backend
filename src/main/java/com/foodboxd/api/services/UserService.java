@@ -45,12 +45,12 @@ public class UserService {
 
         if (userRepository.existsByUsername(username)) {
             throw new ResourceAlreadyExistsException(
-                    "Username already taken: " + username
+                    "Bu kullanıcı adı zaten kullanımda."
             );
         }
         if (userRepository.existsByEmail(email)) {
             throw new ResourceAlreadyExistsException(
-                    "Email already registered: " + email
+                    "Bu e-posta zaten kayıtlı."
             );
         }
 
@@ -88,7 +88,7 @@ public class UserService {
         log.debug("Fetching user. ID: {}", userId);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "User not found. ID: " + userId
+                        "Kullanıcı bulunamadı."
                 ));
         return toResponse(user);
     }
@@ -101,7 +101,7 @@ public class UserService {
         log.info("Update user request. ID: {}", userId);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "User not found for update. ID: " + userId
+                        "Kullanıcı bulunamadı."
                 ));
 
         // Kullanıcı adı — benzersiz olmalı
@@ -110,7 +110,7 @@ public class UserService {
             if (!newUsername.equals(user.getUsername())) {
                 if (userRepository.existsByUsername(newUsername)) {
                     throw new ResourceAlreadyExistsException(
-                            "Username already taken: " + newUsername);
+                            "Bu kullanıcı adı zaten kullanımda.");
                 }
                 user.setUsername(newUsername);
             }
@@ -131,7 +131,7 @@ public class UserService {
                         user.getNameLastChangedAt().plusDays(NAME_CHANGE_COOLDOWN_DAYS);
                 if (now.isBefore(nextAllowed)) {
                     throw new IllegalStateException(
-                            "İsim ve soyisim 15 günde bir değiştirilebilir. "
+                            "Ad ve soyad 15 günde bir değiştirilebilir. "
                                     + "Tekrar değiştirebileceğin tarih: "
                                     + nextAllowed.format(DATE_FMT));
                 }
@@ -170,7 +170,7 @@ public class UserService {
         log.info("Change password request. ID: {}", userId);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "User not found. ID: " + userId
+                        "Kullanıcı bulunamadı."
                 ));
 
         if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {

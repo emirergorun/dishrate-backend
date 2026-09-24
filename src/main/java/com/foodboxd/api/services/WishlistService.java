@@ -40,18 +40,18 @@ public class WishlistService {
         if (wishlistItemRepository.existsByUser_UserIdAndMenuItem_MenuItemId(
                 request.getUserId(), request.getMenuItemId())) {
             throw new ResourceAlreadyExistsException(
-                    "Menu item already in wishlist. Menu Item ID: " + request.getMenuItemId()
+                    "Bu yemek zaten İstek Listesi’nde."
             );
         }
 
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "User not found. ID: " + request.getUserId()
+                        "Kullanıcı bulunamadı."
                 ));
 
         MenuItem menuItem = menuItemRepository.findById(request.getMenuItemId())
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Menu item not found. ID: " + request.getMenuItemId()
+                        "Yemek bulunamadı."
                 ));
 
         WishlistItem wishlistItem = WishlistItem.builder()
@@ -72,7 +72,7 @@ public class WishlistService {
         log.debug("Fetching wishlist for user ID: {}", userId);
         if (!userRepository.existsById(userId)) {
             throw new ResourceNotFoundException(
-                    "User not found. ID: " + userId
+                    "Kullanıcı bulunamadı."
             );
         }
         return wishlistItemRepository.findByUser_UserId(userId)
@@ -89,7 +89,7 @@ public class WishlistService {
         log.info("Remove from wishlist request. Wish ID: {}", wishId);
         WishlistItem item = wishlistItemRepository.findById(wishId)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Wishlist item not found. ID: " + wishId
+                        "İstek Listesi kaydı bulunamadı."
                 ));
         Ownership.requireSelf(currentUser, item.getUser().getUserId());
         wishlistItemRepository.deleteById(wishId);
@@ -104,7 +104,7 @@ public class WishlistService {
         log.info("Remove from wishlist by item. User ID: {}, Menu Item ID: {}", userId, menuItemId);
         if (!wishlistItemRepository.existsByUser_UserIdAndMenuItem_MenuItemId(userId, menuItemId)) {
             throw new ResourceNotFoundException(
-                    "Menu item not found in wishlist. Menu Item ID: " + menuItemId
+                    "Bu yemek İstek Listesi’nde değil."
             );
         }
         wishlistItemRepository.deleteByUser_UserIdAndMenuItem_MenuItemId(userId, menuItemId);

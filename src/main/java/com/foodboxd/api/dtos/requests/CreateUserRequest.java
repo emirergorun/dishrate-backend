@@ -16,16 +16,16 @@ public class CreateUserRequest {
     @Size(min = 3, max = 50, message = "Kullanıcı adı 3 ile 50 karakter arasında olmalıdır")
     @Pattern(
             regexp = "^\\s*[A-Za-z0-9._-]+\\s*$",
-            message = "Kullanıcı adı boşluk içeremez; yalnızca harf, rakam, nokta, alt çizgi ve tire kullanılabilir"
+            message = "Kullanıcı adında boşluk ve Türkçe karakter olamaz; yalnızca a-z, rakam, nokta, alt çizgi ve tire kullanılabilir"
     )
     private String username;
 
-    @NotBlank(message = "İsim boş bırakılamaz")
-    @Size(max = 50, message = "İsim en fazla 50 karakter olabilir")
+    @NotBlank(message = "Ad boş bırakılamaz")
+    @Size(max = 50, message = "Ad en fazla 50 karakter olabilir")
     private String firstName;
 
-    @NotBlank(message = "Soyisim boş bırakılamaz")
-    @Size(max = 50, message = "Soyisim en fazla 50 karakter olabilir")
+    @NotBlank(message = "Soyad boş bırakılamaz")
+    @Size(max = 50, message = "Soyad en fazla 50 karakter olabilir")
     private String lastName;
 
     @NotBlank(message = "E-posta adresi boş bırakılamaz")

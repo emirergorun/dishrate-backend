@@ -50,7 +50,7 @@ public class ClaimService {
     public RestaurantClaimResponse claim(User user, Long restaurantId) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Restoran bulunamadı. ID: " + restaurantId));
+                        "Restoran bulunamadı."));
 
         if (!restaurant.isClaimable()) {
             throw new IllegalStateException(
@@ -141,7 +141,7 @@ public class ClaimService {
 
         RestaurantClaim claim = claimRepository.findById(claimId)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Talep bulunamadı. ID: " + claimId));
+                        "Talep bulunamadı."));
 
         if (claim.getStatus() != ClaimStatus.PENDING) {
             throw new IllegalStateException(

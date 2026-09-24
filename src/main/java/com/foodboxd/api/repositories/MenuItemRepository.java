@@ -29,19 +29,18 @@ public interface MenuItemRepository extends JpaRepository<MenuItem, Long> {
     List<MenuItem> findByNameContainingIgnoreCase(String name);
 
     /**
-     * Arama ekranı: yemek adı, restoran adı ya da kategori adı eşleşen
-     * yemekler, en yüksek puanlı önce. Türkçe karakter ve harf büyüklüğü
-     * yok sayılır (bkz. {@code SearchText}).
+     * Arama ekranı: yemek adı ya da kategori adı eşleşen yemekler, en yüksek
+     * puanlı önce. Türkçe karakter ve harf büyüklüğü yok sayılır (bkz.
+     * {@code SearchText}).
      *
-     * <p>Önceden yalnızca yemek adına bakılıyordu: "Beto" yazınca Beto
-     * Burger'ın hiçbir yemeğinin adında "beto" geçmediği için sonuç çıkmıyordu.
+     * <p>Restoran adına burada bakılmaz; onu {@code SearchService} ayrı arıyor.
+     * Önceden bakılıyordu ve "bun lab" yazınca Bun Lab'ın bütün yemekleri
+     * "eşleşen yemek" sayılıyordu (24 Eylül).
      */
     @Query(value = """
             SELECT mi.* FROM menu_items mi
-              JOIN restaurants r ON r.restaurant_id = mi.restaurant_id
               LEFT JOIN categories c ON c.category_id = mi.category_id
             WHERE lower(translate(mi.name, :source, :target)) LIKE :pattern
-               OR lower(translate(r.name, :source, :target)) LIKE :pattern
                OR lower(translate(coalesce(c.name, ''), :source, :target)) LIKE :pattern
             ORDER BY mi.average_rating DESC, mi.menu_item_id DESC
             LIMIT :maxResults

@@ -16,7 +16,7 @@ public class CreateMenuItemRequest {
 
     private Long categoryId;
 
-    @NotBlank(message = "Ürün adı boş bırakılamaz")
+    @NotBlank(message = "Yemek adı boş bırakılamaz")
     private String name;
 
     private String photoUrl;

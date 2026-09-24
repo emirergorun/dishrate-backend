@@ -41,7 +41,7 @@ public class MenuItemService {
         log.info("Create category request. Name: {}", request.getName());
         if (categoryRepository.existsByName(request.getName())) {
             throw new ResourceAlreadyExistsException(
-                    "Category already exists: " + request.getName()
+                    "Bu kategori zaten var."
             );
         }
         Category category = Category.builder().name(request.getName()).build();
@@ -63,14 +63,14 @@ public class MenuItemService {
 
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Restaurant not found. ID: " + request.getRestaurantId()
+                        "Restoran bulunamadı."
                 ));
         assertCanManage(currentUser, restaurant.getRestaurantId());
 
         if (menuItemRepository.existsByRestaurant_RestaurantIdAndName(
                 request.getRestaurantId(), request.getName())) {
             throw new ResourceAlreadyExistsException(
-                    "Menu item '" + request.getName() + "' already exists in this restaurant."
+                    "Bu restoranın menüsünde bu adla bir yemek zaten var."
             );
         }
 
@@ -78,7 +78,7 @@ public class MenuItemService {
         if (request.getCategoryId() != null) {
             category = categoryRepository.findById(request.getCategoryId())
                     .orElseThrow(() -> new ResourceNotFoundException(
-                            "Category not found. ID: " + request.getCategoryId()
+                            "Kategori bulunamadı."
                     ));
         }
 
@@ -102,7 +102,7 @@ public class MenuItemService {
         log.debug("Fetching menu item. ID: {}", menuItemId);
         MenuItem menuItem = menuItemRepository.findById(menuItemId)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Menu item not found. ID: " + menuItemId
+                        "Yemek bulunamadı."
                 ));
         return toResponse(menuItem);
     }
@@ -115,7 +115,7 @@ public class MenuItemService {
         log.debug("Fetching menu for restaurant ID: {}", restaurantId);
         if (!restaurantRepository.existsById(restaurantId)) {
             throw new ResourceNotFoundException(
-                    "Restaurant not found. ID: " + restaurantId
+                    "Restoran bulunamadı."
             );
         }
         return menuItemRepository.findByRestaurant_RestaurantId(restaurantId)
@@ -163,7 +163,7 @@ public class MenuItemService {
                                            User currentUser) {
         MenuItem menuItem = menuItemRepository.findById(menuItemId)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Menu item not found. ID: " + menuItemId));
+                        "Yemek bulunamadı."));
         assertCanManage(currentUser, menuItem.getRestaurant().getRestaurantId());
 
         if (request.getName() != null && !request.getName().isBlank()) {
@@ -175,7 +175,7 @@ public class MenuItemService {
         if (request.getCategoryId() != null) {
             Category category = categoryRepository.findById(request.getCategoryId())
                     .orElseThrow(() -> new ResourceNotFoundException(
-                            "Category not found. ID: " + request.getCategoryId()));
+                            "Kategori bulunamadı."));
             menuItem.setCategory(category);
         }
 
@@ -206,7 +206,7 @@ public class MenuItemService {
         log.info("Delete menu item request. ID: {}", menuItemId);
         MenuItem menuItem = menuItemRepository.findById(menuItemId)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Menu item not found for deletion. ID: " + menuItemId));
+                        "Yemek bulunamadı."));
         assertCanManage(currentUser, menuItem.getRestaurant().getRestaurantId());
         menuItemRepository.delete(menuItem);
         log.info("Menu item deleted successfully. ID: {}", menuItemId);
@@ -221,7 +221,7 @@ public class MenuItemService {
                 .map(r -> r.isOwnedBy(user.getUserId()))
                 .orElse(false);
         if (!owns) {
-            throw new AccessDeniedException("Bu restoran üzerinde yetkiniz yok.");
+            throw new AccessDeniedException("Bu restoran üzerinde yetkin yok.");
         }
     }
 

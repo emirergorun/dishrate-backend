@@ -41,11 +41,27 @@ public class SearchService {
         if (SearchText.normalize(q).length() < MIN_QUERY_LENGTH) return List.of();
         String pattern = SearchText.containsPattern(q);
 
+        // Yemeği ya da kategorisi eşleşenler, puana göre, restorana göre gruplu.
+        Map<Long, List<MenuItem>> matchedItems = new LinkedHashMap<>();
+        for (MenuItem mi : menuItemRepository.search(
+                pattern, SearchText.SOURCE_CHARS, SearchText.TARGET_CHARS, MAX_ITEMS)) {
+            matchedItems.computeIfAbsent(mi.getRestaurant().getRestaurantId(),
+                    id -> new ArrayList<>()).add(mi);
+        }
+
         Map<Long, SearchResultResponse> result = new LinkedHashMap<>();
 
         // 1) Adı eşleşen restoranlar önce — kullanıcı büyük ihtimalle onu arıyor.
+        // Menüsünde de eşleşen yemek varsa kart onları sayar ("3 eşleşen yemek");
+        // önceden "Sushi Bar" gibi bir restoran bu durumda "Menüye bak" diyordu ve
+        // aynı kelimeyle kategori çipi farklı sonuç veriyor gibi görünüyordu.
         for (Restaurant r : restaurantRepository.searchByNormalizedName(
                 pattern, SearchText.SOURCE_CHARS, SearchText.TARGET_CHARS, MAX_RESTAURANTS)) {
+            List<MenuItem> items = matchedItems.remove(r.getRestaurantId());
+            if (items != null) {
+                result.put(r.getRestaurantId(), entry(r, false, toResponses(items)));
+                continue;
+            }
             List<MenuItemResponse> menu = menuItemRepository
                     .findByRestaurant_RestaurantId(r.getRestaurantId()).stream()
                     .sorted(Comparator.comparing(MenuItem::getAverageRating).reversed())
@@ -55,21 +71,17 @@ public class SearchService {
             result.put(r.getRestaurantId(), entry(r, true, new ArrayList<>(menu)));
         }
 
-        // 2) Yemeği ya da kategorisi eşleşenler, puana göre.
-        for (MenuItem mi : menuItemRepository.search(
-                pattern, SearchText.SOURCE_CHARS, SearchText.TARGET_CHARS, MAX_ITEMS)) {
-            Restaurant r = mi.getRestaurant();
-            SearchResultResponse entry = result.get(r.getRestaurantId());
-            if (entry == null) {
-                if (result.size() >= MAX_RESTAURANTS) continue;
-                entry = entry(r, false, new ArrayList<>());
-                result.put(r.getRestaurantId(), entry);
-            }
-            if (!entry.isNameMatched()) {
-                entry.getItems().add(menuItemService.toResponse(mi));
-            }
+        // 2) Yalnızca yemeği eşleşen restoranlar.
+        for (List<MenuItem> items : matchedItems.values()) {
+            if (result.size() >= MAX_RESTAURANTS) break;
+            Restaurant r = items.get(0).getRestaurant();
+            result.put(r.getRestaurantId(), entry(r, false, toResponses(items)));
         }
         return new ArrayList<>(result.values());
+    }
+
+    private List<MenuItemResponse> toResponses(List<MenuItem> items) {
+        return new ArrayList<>(items.stream().map(menuItemService::toResponse).toList());
     }
 
     private SearchResultResponse entry(Restaurant r, boolean nameMatch,

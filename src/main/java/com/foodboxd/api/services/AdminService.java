@@ -37,7 +37,7 @@ public class AdminService {
     @Transactional
     public UserResponse changeUserRole(Long userId, UserRole newRole) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı bulunamadı. ID: " + userId));
+                .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı bulunamadı."));
         user.setRole(newRole);
         userRepository.save(user);
         log.info("Kullanıcı rolü değiştirildi. ID: {}, Yeni rol: {}", userId, newRole);

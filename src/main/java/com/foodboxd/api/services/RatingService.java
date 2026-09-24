@@ -49,12 +49,12 @@ public class RatingService {
 
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "User not found. ID: " + request.getUserId()
+                        "Kullanıcı bulunamadı."
                 ));
 
         MenuItem menuItem = menuItemRepository.findById(request.getMenuItemId())
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Menu item not found. ID: " + request.getMenuItemId()
+                        "Yemek bulunamadı."
                 ));
 
         Optional<Rating> existingRating = ratingRepository
@@ -105,7 +105,7 @@ public class RatingService {
     public List<MenuItemReviewResponse> getRatingsByMenuItem(Long menuItemId, User viewer) {
         log.debug("Fetching ratings for menu item ID: {}", menuItemId);
         if (!menuItemRepository.existsById(menuItemId)) {
-            throw new ResourceNotFoundException("Menu item not found. ID: " + menuItemId);
+            throw new ResourceNotFoundException("Yemek bulunamadı.");
         }
         Long viewerId = viewer != null ? viewer.getUserId() : null;
         return ratingRepository.findByMenuItem_MenuItemId(menuItemId)
@@ -163,7 +163,7 @@ public class RatingService {
     public List<RatingResponse> getRatingsByUser(Long userId) {
         log.debug("Fetching ratings for user ID: {}", userId);
         if (!userRepository.existsById(userId)) {
-            throw new ResourceNotFoundException("User not found. ID: " + userId);
+            throw new ResourceNotFoundException("Kullanıcı bulunamadı.");
         }
         return ratingRepository.findByUser_UserId(userId)
                 .stream()
@@ -179,7 +179,7 @@ public class RatingService {
         log.info("Delete rating request. ID: {}", ratingId);
         Rating rating = ratingRepository.findById(ratingId)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Rating not found. ID: " + ratingId
+                        "Değerlendirme bulunamadı."
                 ));
         Ownership.requireSelf(currentUser, rating.getUser().getUserId());
 
@@ -235,11 +235,11 @@ public class RatingService {
     // -----------------------------------------------------------------------
     private void validateScore(BigDecimal score) {
         if (score == null) {
-            throw new InvalidScoreException("Score cannot be null.");
+            throw new InvalidScoreException("Puan boş olamaz.");
         }
         if (score.compareTo(MIN_SCORE) < 0 || score.compareTo(MAX_SCORE) > 0) {
             throw new InvalidScoreException(
-                    "Score must be between 0.5 and 5.0. Provided: " + score
+                    "Puan 0.5 ile 5.0 arasında olmalı."
             );
         }
     }

@@ -1,5 +1,6 @@
 package com.foodboxd.api.exceptions;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -25,9 +26,13 @@ public class GlobalExceptionHandler {
     // -----------------------------------------------------------------------
     // Resource Not Found (404)
     // -----------------------------------------------------------------------
+    // Kullanıcıya giden mesajda iç kimlik yok ("Yemek bulunamadı."); hangi
+    // kaydın arandığı log'a istek adresinden düşüyor.
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleResourceNotFound(ResourceNotFoundException ex) {
-        log.error("Resource not found: {}", ex.getMessage());
+    public ResponseEntity<ErrorResponse> handleResourceNotFound(ResourceNotFoundException ex,
+                                                                HttpServletRequest request) {
+        log.error("Resource not found: {} ({} {})", ex.getMessage(),
+                request.getMethod(), request.getRequestURI());
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.NOT_FOUND.value(),
                 "Resource Not Found",
@@ -61,8 +66,8 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),
                 "Malformed Request Body",
-                "İstek gövdesi okunamadı. Geçerli bir JSON gönderdiğinizden ve "
-                        + "'Content-Type: application/json' başlığını eklediğinizden emin olun."
+                "İstek gövdesi okunamadı. Geçerli bir JSON gönderdiğinden ve "
+                        + "'Content-Type: application/json' başlığını eklediğinden emin ol."
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
@@ -77,7 +82,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.UNSUPPORTED_MEDIA_TYPE.value(),
                 "Unsupported Media Type",
-                "Desteklenmeyen içerik tipi. 'Content-Type: application/json' başlığını ekleyin."
+                "Desteklenmeyen içerik tipi. 'Content-Type: application/json' başlığını ekle."
         );
         return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(errorResponse);
     }
@@ -92,7 +97,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),
                 "File Too Large",
-                "Dosya çok büyük. En fazla 5MB yükleyebilirsin."
+                "Dosya çok büyük. En fazla 5 MB yükleyebilirsin."
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
@@ -159,7 +164,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),
                 "Validation Error",
-                "The submitted data is invalid. Please check your fields.",
+                "Gönderilen bilgiler geçersiz, alanları kontrol et.",
                 errors
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
@@ -174,7 +179,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.CONFLICT.value(),
                 "Data Integrity Violation",
-                "This record already exists or a required relationship was violated."
+                "Bu kayıt zaten var ya da bağlı olduğu bir kayıt eksik."
         );
         return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
     }
@@ -188,7 +193,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.METHOD_NOT_ALLOWED.value(),
                 "Method Not Allowed",
-                "This endpoint does not support the '" + ex.getMethod() + "' method."
+                "Bu adres '" + ex.getMethod() + "' yöntemini desteklemiyor."
         );
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(errorResponse);
     }
@@ -202,7 +207,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.NOT_FOUND.value(),
                 "Endpoint Not Found",
-                "The requested URL does not exist: " + ex.getResourcePath()
+                "Böyle bir adres yok: " + ex.getResourcePath()
         );
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
     }
@@ -244,7 +249,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 "Internal Server Error",
-                "An unexpected error occurred. Please try again later."
+                "Beklenmeyen bir hata oluştu, biraz sonra tekrar dene."
         );
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
     }
