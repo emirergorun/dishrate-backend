@@ -42,6 +42,15 @@ public class Rating {
     @Column(name = "photo_url", columnDefinition = "TEXT")
     private String photoUrl;
 
+    /**
+     * Bildirim eşiğini aşınca herkesten gizlenir (yazarı hariç); yol haritası
+     * 2.11'deki inceleme ekranı geri açabilir. Kolon varsayılanı sayesinde
+     * eski satırlar göç gerekmeden {@code false} olur.
+     */
+    @Builder.Default
+    @Column(name = "hidden", columnDefinition = "boolean not null default false")
+    private boolean hidden = false;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

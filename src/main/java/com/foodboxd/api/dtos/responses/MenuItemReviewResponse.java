@@ -7,16 +7,15 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * Bir menü öğesine yapılan değerlendirme — gizlilik için değerlendirenin
- * adı maskelenir (örn. "E*** E***"). Kullanıcı kendi yorumunu gerçek adıyla görür.
- * Gerçek kullanıcı kimliği (userId/username) dışarı verilmez.
+ * Bir yemeğe yapılan değerlendirme. Yazar "@kullanıcıadı" olarak görünür
+ * (karar 25 Eylül); ad, soyad ve kullanıcı kimliği (id) dışarı verilmez.
  */
 @Getter
 @Builder
 public class MenuItemReviewResponse {
 
     private Long ratingId;
-    private String reviewerName; // maskeli (başkası) veya gerçek (kendi yorumu)
+    private String reviewerName; // "@kullaniciadi"
     private boolean mine;
     private BigDecimal score;
     private String comment;

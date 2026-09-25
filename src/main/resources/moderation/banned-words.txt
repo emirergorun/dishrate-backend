@@ -1,0 +1,85 @@
+# Yorumlarda reddedilen ifadeler (ProfanityFilter).
+# Satır başına bir kelime. Karşılaştırma SearchText.normalize ile yapılır:
+# Türkçe karakter ve büyük/küçük harf farkı yok sayılır, yani "şerefsiz"
+# yazmak yeter.
+#
+#   kelime        → yalnız tam kelime eşleşir
+#   kök*          → bu kökle başlayan her kelime eşleşir (Türkçe ekler için)
+#   iki kelime    → kelimeler art arda geçerse eşleşir; her parça yukarıdaki
+#                   kurallarla ("anasını sik*"). Tek başına masum olan
+#                   kelimeleri ("anası") yalnız kalıp içinde yakalamak için.
+#
+# Kök eklerken dikkat: kısa kökler masum kelimelere çarpar ("sik*" →
+# "sıkıcı", "am*" → "ama"). Emin değilsen tam kelime yaz. Türkçe harfler
+# sadeleştiği için yemek dilindeki kelimeleri de düşün: "sikin" yazılmadı
+# çünkü "limonu sıkın" da "sikin" oluyor; "piç" yazılmadı çünkü İngilizce
+# "pic" (fotoğraf) ile aynı.
+
+# Türkçe
+orospu*
+pezevenk*
+yarrak*
+yarak
+amcık
+amcıg*
+amcig*
+sikiyim*
+sikecegi*
+sikeceği*
+oç
+oe
+yarragi*
+amcik*
+aminakoy*
+aminakoyim
+aminakoydugum*
+amina
+amini
+siktir*
+sikerim
+sikeyim
+sikiyim
+sikiym
+sikim
+sikimi
+sikicem
+sikecem
+sikeceg*
+siktim
+siktig*
+sikik*
+sikis*
+gotveren*
+gotlek*
+ibne*
+kahpe*
+yavsak*
+serefsiz*
+gavat*
+kaltak*
+dalyarak*
+# Kalıplar: parçalar tek başına masum olabilir.
+# "ana* sik*" yazılmadı: "anası sıkıcı" da yakalanırdı.
+ana* sikey*
+ana* sikiy*
+ana* siker*
+ana* sikim*
+bacini sik*
+# "anan* am*" yazılmadı: "ananas ambalajı" da yakalanırdı.
+anani* ami*
+anani* amina*
+amina koy*
+amina kod*
+# İngilizce
+fuck*
+motherfuck*
+shit*
+bitch*
+cunt*
+asshole*
+dickhead*
+nigger*
+nigga*
+faggot*
+whore*
+slut*

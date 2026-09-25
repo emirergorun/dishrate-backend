@@ -10,8 +10,12 @@ import com.foodboxd.api.entities.User;
 import com.foodboxd.api.exceptions.InvalidScoreException;
 import com.foodboxd.api.exceptions.ResourceNotFoundException;
 import com.foodboxd.api.repositories.MenuItemRepository;
+import com.foodboxd.api.repositories.RatingReportRepository;
 import com.foodboxd.api.repositories.RatingRepository;
+import com.foodboxd.api.repositories.UserBlockRepository;
 import com.foodboxd.api.repositories.UserRepository;
+import com.foodboxd.api.utils.NameMask;
+import com.foodboxd.api.utils.ProfanityFilter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,6 +25,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -35,6 +40,9 @@ public class RatingService {
     private final UserRepository userRepository;
     private final MenuItemRepository menuItemRepository;
     private final NotificationService notificationService;
+    private final RatingReportRepository reportRepository;
+    private final UserBlockRepository blockRepository;
+    private final ProfanityFilter profanityFilter;
 
     // -----------------------------------------------------------------------
     // UPSERT: Create or update a rating
@@ -46,6 +54,10 @@ public class RatingService {
 
         validateScore(request.getScore());
         String photoUrl = validatePhotoUrl(request.getPhotoUrl());
+        if (profanityFilter.containsProfanity(request.getComment())) {
+            throw new IllegalArgumentException(
+                    "Yorumunda uygunsuz bir ifade var, düzenleyip tekrar dene.");
+        }
 
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -93,7 +105,7 @@ public class RatingService {
 
         // Restoran sahiplerine bildirim (değerlendiren maskeli; owner kendini puanladıysa gitmez)
         notificationService.notifyOwnersNewRating(
-                menuItem, user.getUserId(), maskName(user), savedRating.getScore());
+                menuItem, user.getUserId(), NameMask.of(user), savedRating.getScore());
 
         return toResponse(savedRating, updatedAverage);
     }
@@ -108,15 +120,31 @@ public class RatingService {
             throw new ResourceNotFoundException("Yemek bulunamadı.");
         }
         Long viewerId = viewer != null ? viewer.getUserId() : null;
+        // Gösterilmeyenler (1.7): bildirim eşiğini aşıp gizlenenler, izleyenin
+        // bildirdikleri ve izleyenle arasında engel olan kullanıcılarınkiler.
+        // Kendi değerlendirmesi her zaman görünür.
+        Set<Long> reported = viewerId != null
+                ? reportRepository.findRatingIdsReportedBy(viewerId) : Set.of();
+        Set<Long> blockedUsers = viewerId != null
+                ? blockRepository.findRelatedUserIds(viewerId) : Set.of();
         return ratingRepository.findByMenuItem_MenuItemId(menuItemId)
                 .stream()
+                .filter(r -> {
+                    Long authorId = r.getUser().getUserId();
+                    if (authorId.equals(viewerId)) return true;
+                    return !r.isHidden()
+                            && !reported.contains(r.getRatingId())
+                            && !blockedUsers.contains(authorId);
+                })
                 .map(r -> {
                     boolean mine = viewerId != null
                             && r.getUser().getUserId().equals(viewerId);
                     return MenuItemReviewResponse.builder()
                             .ratingId(r.getRatingId())
-                            // Kendi yorumu gerçek ad, başkasınınki maskeli
-                            .reviewerName(mine ? displayName(r.getUser()) : maskName(r.getUser()))
+                            // Herkes kullanıcı adıyla görünür (karar 25 Eylül):
+                            // maskeli ad ("A*** B***") kişileri ayırt
+                            // ettirmiyordu. Ad ve soyad gösterilmez.
+                            .reviewerName("@" + r.getUser().getUsername())
                             .mine(mine)
                             .score(r.getScore())
                             .comment(r.getComment())
@@ -125,35 +153,6 @@ public class RatingService {
                             .build();
                 })
                 .collect(Collectors.toList());
-    }
-
-    // İsim/soyisim varsa "Ad Soyad", yoksa kullanıcı adı.
-    private String displayName(User u) {
-        String first = u.getFirstName();
-        String last = u.getLastName();
-        if (first != null && !first.isBlank()) {
-            return last != null && !last.isBlank()
-                    ? first.trim() + " " + last.trim()
-                    : first.trim();
-        }
-        return u.getUsername();
-    }
-
-    // "Emir Ergörün" → "E*** E***", "emir_test" → "e***"
-    private String maskName(User u) {
-        String first = u.getFirstName();
-        String last = u.getLastName();
-        if (first != null && !first.isBlank()) {
-            String masked = maskWord(first);
-            if (last != null && !last.isBlank()) masked += " " + maskWord(last);
-            return masked;
-        }
-        return maskWord(u.getUsername());
-    }
-
-    private String maskWord(String s) {
-        String t = s == null ? "" : s.trim();
-        return t.isEmpty() ? "***" : t.charAt(0) + "***";
     }
 
     // -----------------------------------------------------------------------

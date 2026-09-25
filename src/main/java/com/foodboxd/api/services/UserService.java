@@ -7,6 +7,7 @@ import com.foodboxd.api.entities.User;
 import com.foodboxd.api.exceptions.ResourceAlreadyExistsException;
 import com.foodboxd.api.exceptions.ResourceNotFoundException;
 import com.foodboxd.api.repositories.UserRepository;
+import com.foodboxd.api.utils.ProfanityFilter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -30,6 +31,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ProfanityFilter profanityFilter;
 
     // -----------------------------------------------------------------------
     // Create a new user
@@ -42,6 +44,8 @@ public class UserService {
         final String username = normalize(request.getUsername());
         final String email = normalize(request.getEmail());
         log.info("Create user request received. Username: {}", username);
+        requireCleanUsername(username);
+        requireCleanName(request.getFirstName(), request.getLastName());
 
         if (userRepository.existsByUsername(username)) {
             throw new ResourceAlreadyExistsException(
@@ -108,6 +112,7 @@ public class UserService {
         if (request.getUsername() != null) {
             final String newUsername = normalize(request.getUsername());
             if (!newUsername.equals(user.getUsername())) {
+                requireCleanUsername(newUsername);
                 if (userRepository.existsByUsername(newUsername)) {
                     throw new ResourceAlreadyExistsException(
                             "Bu kullanıcı adı zaten kullanımda.");
@@ -125,6 +130,9 @@ public class UserService {
                 && !newLast.trim().equals(user.getLastName());
 
         if (firstChanging || lastChanging) {
+            // Süzgeç 15 gün kuralından önce: reddedilen deneme hakkı yemesin.
+            requireCleanName(firstChanging ? newFirst : user.getFirstName(),
+                    lastChanging ? newLast : user.getLastName());
             LocalDateTime now = LocalDateTime.now();
             if (user.getNameLastChangedAt() != null) {
                 LocalDateTime nextAllowed =
@@ -213,5 +221,33 @@ public class UserService {
                 .role(user.getRole())
                 .nameChangeAvailableAt(nameChangeAvailableAt)
                 .build();
+    }
+
+    /**
+     * Kullanıcı adı yorumlarda herkese görünüyor (karar 25 Eylül); küfürlü
+     * ad yorum süzgecinden geçmeden her yorumun başında dururdu. Ad "_" ve
+     * "." ile bölünmüş parçalar olarak da denetlenir ("xx_kufur").
+     */
+    /**
+     * Ad ve soyad bugün başkalarına görünmüyor (yorumlarda kullanıcı adı var),
+     * ama profil 6.2'de açılınca görünecek; uygunsuz ad baştan girmesin.
+     * Ayrı ayrı ve birlikte denetlenir: iki kelimelik kalıplar ("ananın amı")
+     * ad ile soyadın arasına bölünebiliyor.
+     */
+    private void requireCleanName(String first, String last) {
+        String f = first == null ? "" : first;
+        String l = last == null ? "" : last;
+        if (profanityFilter.containsProfanity(f)
+                || profanityFilter.containsProfanity(l)
+                || profanityFilter.containsProfanity(f + " " + l)) {
+            throw new IllegalArgumentException("Ad ya da soyad kullanılamaz, başka bir ad yaz.");
+        }
+    }
+
+    private void requireCleanUsername(String username) {
+        if (profanityFilter.containsProfanity(username.replaceAll("[._-]", " "))
+                || profanityFilter.containsProfanity(username)) {
+            throw new IllegalArgumentException("Bu kullanıcı adı kullanılamaz, başka bir ad seç.");
+        }
     }
 }
