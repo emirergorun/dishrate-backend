@@ -1,6 +1,7 @@
 package com.foodboxd.api.config;
 
 import com.foodboxd.api.security.JwtAuthenticationFilter;
+import com.foodboxd.api.security.RateLimitFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,6 +23,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final RateLimitFilter rateLimitFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -37,6 +39,19 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/files/**").permitAll()
                         // Sadece admin
                         .requestMatchers("/admin/**").hasRole("ADMIN")
+                        // Kişiye özel okuma uçları — aşağıdaki herkese açık
+                        // kurallardan ÖNCE gelmeli (ilk eşleşen kural geçerli).
+                        // Kişiye özel yeni bir GET eklenirse buraya yazılır.
+                        .requestMatchers("/restaurants/mine", "/restaurants/claims/**",
+                                "/users/**", "/wishlist/**", "/notifications/**",
+                                "/ratings/user/**")
+                        .authenticated()
+                        // Misafir gezinme (1.8): katalog ve yorumlar giriş
+                        // istemeden okunur. Yazma işlemleri aşağıdaki kurala düşer.
+                        .requestMatchers(HttpMethod.GET,
+                                "/menu-items/**", "/restaurants/**", "/search",
+                                "/ratings/menu-item/**")
+                        .permitAll()
                         // Katalog (restoran, adres, kategori) oluşturmak yalnızca admin işi;
                         // önceden giriş yapmış herkes restoran ekleyebiliyordu.
                         .requestMatchers(HttpMethod.POST,
@@ -68,7 +83,9 @@ public class SecurityConfig {
                         // setStatus() yönlendirme başlatmaz; kod olduğu gibi kalır.
                         .accessDeniedHandler((request, response, denied) ->
                                 response.setStatus(HttpStatus.FORBIDDEN.value())))
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                // Sınır kimlik belirlendikten sonra: girişli istekler sınırsız.
+                .addFilterAfter(rateLimitFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }

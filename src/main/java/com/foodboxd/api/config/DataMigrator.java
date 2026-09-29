@@ -1,7 +1,9 @@
 package com.foodboxd.api.config;
 
 import com.foodboxd.api.entities.Category;
+import com.foodboxd.api.entities.User;
 import com.foodboxd.api.repositories.CategoryRepository;
+import com.foodboxd.api.services.MemberCodeGenerator;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,9 +12,11 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Var olan veritabanlarını güncel şemaya/tanımlara getiren küçük göçler.
@@ -31,6 +35,7 @@ public class DataMigrator implements CommandLineRunner {
     private final CategoryRepository categoryRepository;
     private final EntityManager entityManager;
     private final DishPhotos photos;
+    private final MemberCodeGenerator memberCodeGenerator;
 
     /** 404 dönmeye başlayan eski Unsplash adresleri → yerine fotoğrafı konacak yemek. */
     private static final Map<String, String> BROKEN_PHOTOS = Map.of(
@@ -49,6 +54,31 @@ public class DataMigrator implements CommandLineRunner {
         }
         replaceBrokenPhotos();
         backfillRatingCounts();
+        backfillMemberCodes();
+    }
+
+    /**
+     * Adisyon (1.9): eski hesaplara üye kodu ve kayıt anı. Gerçek kayıt tarihi
+     * bilinmediği için göç anı yazılır.
+     */
+    private void backfillMemberCodes() {
+        List<User> users = entityManager.createQuery(
+                "select u from User u where u.memberCode is null", User.class)
+                .getResultList();
+        Set<String> codes = new HashSet<>();
+        for (User user : users) {
+            String code = memberCodeGenerator.next(codes);
+            codes.add(code);
+            user.setMemberCode(code);
+        }
+        // created_at güncellenemez (updatable = false); boşları doğrudan SQL doldurur.
+        int dated = entityManager.createNativeQuery(
+                "update users set created_at = now() where created_at is null")
+                .executeUpdate();
+        if (!users.isEmpty() || dated > 0) {
+            log.info("Veri göçü: {} kullanıcıya üye kodu, {} kullanıcıya kayıt anı verildi.",
+                    users.size(), dated);
+        }
     }
 
     /**

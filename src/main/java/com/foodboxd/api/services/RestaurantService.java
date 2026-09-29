@@ -108,9 +108,14 @@ public class RestaurantService {
     @Transactional(readOnly = true)
     public List<RestaurantResponse> getMyRestaurants(User user) {
         log.debug("Fetching restaurants owned by user ID: {}", user.getUserId());
+        // Sahip bilgisi yalnızca burada, sahibin kendisine gider (1.8).
         return restaurantRepository.findByOwnerUserId(user.getUserId())
                 .stream()
-                .map(this::toResponse)
+                .map(r -> {
+                    RestaurantResponse response = toResponse(r);
+                    response.setOwnerId(user.getUserId());
+                    return response;
+                })
                 .collect(Collectors.toList());
     }
 
@@ -236,9 +241,6 @@ public class RestaurantService {
                 .name(restaurant.getName())
                 .logoUrl(restaurant.getLogoUrl())
                 .address(addressResponse)
-                .ownerId(restaurant.getOwner() != null
-                        ? restaurant.getOwner().getUserId()
-                        : null)
                 .claimable(restaurant.isClaimable())
                 .categoryName(categoryName)
                 .build();

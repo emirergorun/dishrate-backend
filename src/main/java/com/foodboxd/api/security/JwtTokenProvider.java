@@ -66,8 +66,11 @@ public class JwtTokenProvider {
             log.warn("JWT token unsupported: {}", e.getMessage());
         } catch (MalformedJwtException e) {
             log.warn("JWT token malformed: {}", e.getMessage());
-        } catch (SecurityException e) {
-            log.warn("JWT signature invalid: {}", e.getMessage());
+        } catch (JwtException e) {
+            // İmzası bozuk token (jjwt'nin SignatureException'ı) ve diğer
+            // jjwt hataları. Önceden java.lang.SecurityException yakalanıyordu;
+            // imza hatası filtreden kaçıp isteği 500'e düşürüyordu.
+            log.warn("JWT invalid: {}", e.getMessage());
         } catch (IllegalArgumentException e) {
             log.warn("JWT token empty: {}", e.getMessage());
         }

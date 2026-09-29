@@ -3,6 +3,7 @@ package com.foodboxd.api.config;
 import com.foodboxd.api.entities.*;
 import com.foodboxd.api.repositories.*;
 import jakarta.persistence.EntityManager;
+import com.foodboxd.api.services.MemberCodeGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -60,6 +61,7 @@ import java.util.*;
 public class MockDataSeeder implements CommandLineRunner {
 
     private final CategoryRepository categoryRepository;
+    private final MemberCodeGenerator memberCodeGenerator;
     private final AddressRepository addressRepository;
     private final RestaurantRepository restaurantRepository;
     private final MenuItemRepository menuItemRepository;
@@ -255,6 +257,7 @@ public class MockDataSeeder implements CommandLineRunner {
     private List<User> generateUsers() {
         String hash = passwordEncoder.encode(PASSWORD);   // bir kez; bcrypt pahalı
         List<User> list = new ArrayList<>(USER_COUNT);
+        Set<String> codes = new HashSet<>();
         for (int i = 1; i <= USER_COUNT; i++) {
             String no = String.format("%03d", i);
             list.add(User.builder()
@@ -264,9 +267,16 @@ public class MockDataSeeder implements CommandLineRunner {
                     .email("kullanici" + no + EMAIL_DOMAIN)
                     .passwordHash(hash)
                     .role(UserRole.USER)
+                    .memberCode(nextCode(codes))
                     .build());
         }
         return userRepository.saveAll(list);
+    }
+
+    private String nextCode(Set<String> codes) {
+        String code = memberCodeGenerator.next(codes);
+        codes.add(code);
+        return code;
     }
 
     // ── Restoranlar ve menüler ────────────────────────────────────────────────

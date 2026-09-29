@@ -3,6 +3,7 @@ package com.foodboxd.api.config;
 import com.foodboxd.api.entities.User;
 import com.foodboxd.api.entities.UserRole;
 import com.foodboxd.api.repositories.UserRepository;
+import com.foodboxd.api.services.MemberCodeGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,6 +18,7 @@ public class AdminSeeder implements CommandLineRunner {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final MemberCodeGenerator memberCodeGenerator;
 
     @Value("${admin.seed.username}")
     private String adminUsername;
@@ -41,6 +43,7 @@ public class AdminSeeder implements CommandLineRunner {
                 .email(adminEmail)
                 .passwordHash(passwordEncoder.encode(adminPassword))
                 .role(UserRole.ADMIN)
+                .memberCode(memberCodeGenerator.next())
                 .build();
 
         userRepository.save(admin);

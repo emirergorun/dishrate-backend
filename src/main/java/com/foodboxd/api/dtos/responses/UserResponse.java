@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 @Getter
@@ -30,4 +31,8 @@ public class UserResponse {
     // İsim/soyisim'in tekrar değiştirilebileceği en erken zaman.
     // null → şu an değiştirilebilir (15 günlük pencere dolmuş veya hiç değişmemiş).
     private LocalDateTime nameChangeAvailableAt;
+
+    // Adisyon (1.9): kayıt anı ve üye kodu. İç kimlik yerine kod gösterilir.
+    private Instant createdAt;
+    private String memberCode;
 }

@@ -2,7 +2,9 @@ package com.foodboxd.api.entities;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -68,6 +70,15 @@ public class User {
     @Column(name = "role", nullable = false, length = 20)
     @Builder.Default
     private UserRole role = UserRole.USER;
+
+    /** Kayıt anı; adisyonda gösterilir (1.9). Göçten önceki hesaplarda göç anı. */
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private Instant createdAt;
+
+    /** Adisyondaki üye kodu, ör. "7K4P2Q" (bkz. {@code MemberCodeGenerator}). */
+    @Column(name = "member_code", unique = true, length = 12)
+    private String memberCode;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Rating> ratings;

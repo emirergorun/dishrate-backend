@@ -35,6 +35,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String token = extractTokenFromRequest(request);
 
+        // Token gönderilmiş ama geçersiz ya da süresi dolmuş: herkese açık
+        // uçlarda bile 401. Anonim geçirseydik süresi dolmuş token'la açılan
+        // yorum listesinde "mine" sessizce kaybolurdu; 401 ile mobil token'ı
+        // yenileyip isteği tekrarlıyor. Token'sız istek (misafir) anonim geçer.
+        // Giriş/yenileme uçları hariç: orada eski token'ın önemi yok.
+        if (StringUtils.hasText(token) && !request.getServletPath().startsWith("/auth/")
+                && !tokenProvider.validateToken(token)) {
+            writeUnauthorized(response);
+            return;
+        }
+
         if (StringUtils.hasText(token) && tokenProvider.validateToken(token)) {
             Long userId = tokenProvider.getUserIdFromToken(token);
             Optional<User> userOpt = userRepository.findById(userId);
@@ -61,6 +72,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private void writeUnauthorized(HttpServletResponse response) throws IOException {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType("application/json;charset=UTF-8");
+        response.getWriter().write(
+                "{\"status\":401,\"error\":\"token_invalid\","
+                        + "\"message\":\"Oturumunun süresi doldu, tekrar giriş yap.\"}");
     }
 
     private String extractTokenFromRequest(HttpServletRequest request) {

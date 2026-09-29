@@ -23,4 +23,11 @@ public class FeedSectionResponse {
 
     /** Daha fazlası var mı — "Tümünü gör" bağlantısı buna göre gösterilir. */
     private boolean hasMore;
+
+    /**
+     * İlçe süzgeci uygulandı mı. İlçe seçiliyken {@code false} ise ilçede
+     * yeterli içerik yoktu, il geneli döndü; istemci başlığı il adıyla yazar
+     * ve bunu söyler. İlçe seçilmemişse de {@code false}.
+     */
+    private boolean districtApplied;
 }

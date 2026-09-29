@@ -14,7 +14,11 @@ public class RestaurantResponse {
     private String logoUrl;
     private AddressResponse address;
 
-    /** Sahibinin kullanıcı ID'si; sahipsizse null. */
+    /**
+     * Sahibinin kullanıcı ID'si. Yalnızca `/restaurants/mine`'da dolu; herkese
+     * açık yanıtlarda null (1.8: okuma uçları misafire açıldı, sahibin
+     * kimliği dışarı sızmasın).
+     */
     private Long ownerId;
 
     /** Sahiplik talebine açık mı? (ownerId == null ile aynı bilgi, istemci

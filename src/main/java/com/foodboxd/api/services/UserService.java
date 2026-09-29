@@ -32,6 +32,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final ProfanityFilter profanityFilter;
+    private final MemberCodeGenerator memberCodeGenerator;
 
     // -----------------------------------------------------------------------
     // Create a new user
@@ -66,6 +67,7 @@ public class UserService {
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .profilePhotoUrl(request.getProfilePhotoUrl())
                 .bio(request.getBio())
+                .memberCode(memberCodeGenerator.next())
                 .build();
 
         User saved = userRepository.save(user);
@@ -220,6 +222,8 @@ public class UserService {
                 .bio(user.getBio())
                 .role(user.getRole())
                 .nameChangeAvailableAt(nameChangeAvailableAt)
+                .createdAt(user.getCreatedAt())
+                .memberCode(user.getMemberCode())
                 .build();
     }
 

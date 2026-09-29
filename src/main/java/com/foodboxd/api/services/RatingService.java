@@ -4,6 +4,7 @@ import com.foodboxd.api.security.Ownership;
 import com.foodboxd.api.dtos.requests.CreateRatingRequest;
 import com.foodboxd.api.dtos.responses.MenuItemReviewResponse;
 import com.foodboxd.api.dtos.responses.RatingResponse;
+import com.foodboxd.api.entities.Address;
 import com.foodboxd.api.entities.MenuItem;
 import com.foodboxd.api.entities.Rating;
 import com.foodboxd.api.entities.User;
@@ -247,6 +248,7 @@ public class RatingService {
     // Private: Entity → Response DTO
     // -----------------------------------------------------------------------
     private RatingResponse toResponse(Rating rating, BigDecimal updatedAverage) {
+        Address address = rating.getMenuItem().getRestaurant().getAddress();
         return RatingResponse.builder()
                 .ratingId(rating.getRatingId())
                 .userId(rating.getUser().getUserId())
@@ -257,6 +259,8 @@ public class RatingService {
                 .reviewPhotoUrl(rating.getPhotoUrl())
                 .restaurantId(rating.getMenuItem().getRestaurant().getRestaurantId())
                 .restaurantName(rating.getMenuItem().getRestaurant().getName())
+                .restaurantDistrict(address == null ? null : address.getDistrict())
+                .restaurantCity(address == null ? null : address.getCity())
                 .categoryName(rating.getMenuItem().getCategory() != null
                         ? rating.getMenuItem().getCategory().getName()
                         : null)

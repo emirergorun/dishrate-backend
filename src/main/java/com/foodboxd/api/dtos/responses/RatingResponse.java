@@ -23,6 +23,9 @@ public class RatingResponse {
     private String reviewPhotoUrl;
     private Long restaurantId;
     private String restaurantName;
+    /** Restoranın ilçesi ve ili (adisyondaki favori yemekler, 1.9). */
+    private String restaurantDistrict;
+    private String restaurantCity;
     private String categoryName;
     private BigDecimal score;
     private String comment;

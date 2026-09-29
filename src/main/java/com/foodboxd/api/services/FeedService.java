@@ -123,6 +123,7 @@ public class FeedService {
                 .key(b.key())
                 .items(result.map(menuItemService::toResponse).toList())
                 .hasMore(result.getTotalElements() > (long) b.skip() + limit)
+                .districtApplied(!districtKey.isEmpty())
                 .build();
     }
 
