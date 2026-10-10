@@ -4,6 +4,7 @@ import com.foodboxd.api.entities.User;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -21,15 +22,25 @@ public class JwtTokenProvider {
     @Value("${jwt.access-token-expiration-ms}")
     private long accessTokenExpirationMs;
 
-    private SecretKey getSigningKey() {
-        byte[] keyBytes = jwtSecret.getBytes();
-        // Ensure key is at least 512 bits for HS512; pad if necessary
-        if (keyBytes.length < 64) {
-            byte[] paddedKey = new byte[64];
-            System.arraycopy(keyBytes, 0, paddedKey, 0, keyBytes.length);
-            return Keys.hmacShaKeyFor(paddedKey);
+    /** HS512 için en az 512 bit. */
+    private static final int MIN_KEY_BYTES = 64;
+
+    /**
+     * Anahtar açılışta denetlenir (2.13): eksik ya da kısa anahtarla uygulama
+     * hiç açılmaz. Eskiden kısa anahtar sessizce sıfırlarla tamamlanıp kabul
+     * ediliyordu; zayıf bir anahtar yayına fark edilmeden çıkabilirdi.
+     */
+    @PostConstruct
+    void validateSecret() {
+        if (jwtSecret == null || jwtSecret.getBytes().length < MIN_KEY_BYTES) {
+            throw new IllegalStateException(
+                    "JWT anahtarı eksik ya da kısa: JWT_SECRET en az " + MIN_KEY_BYTES
+                            + " bayt olmalı. Üretmek için: openssl rand -base64 64");
         }
-        return Keys.hmacShaKeyFor(keyBytes);
+    }
+
+    private SecretKey getSigningKey() {
+        return Keys.hmacShaKeyFor(jwtSecret.getBytes());
     }
 
     public String generateAccessToken(User user) {

@@ -1,0 +1,28 @@
+# Yerel geliştirme ayarları ve sırlar — şablon.
+# Kurulum: bu dosyayı proje kökünde application-local.properties adıyla
+# kopyala ve YOUR_* değerlerini doldur:
+#
+#   cp application-local.properties.example application-local.properties
+#
+# application-local.properties .gitignore'da — asla commit etme.
+# Sunucuda bu dosya yoktur; aynı değerler ortam değişkeni olarak verilir
+# (DB_URL, DB_USERNAME, DB_PASSWORD, JWT_SECRET, ADMIN_SEED_EMAIL, ADMIN_SEED_PASSWORD).
+
+# Veritabanı
+spring.datasource.url=jdbc:postgresql://localhost:5432/dishrate_db
+spring.datasource.username=YOUR_DB_USERNAME
+spring.datasource.password=YOUR_DB_PASSWORD
+
+# JWT imza anahtarı (en az 64 bayt): openssl rand -base64 64
+jwt.secret=YOUR_JWT_SECRET
+
+# Admin hesabı (yoksa açılışta oluşturulur)
+admin.seed.username=admin
+admin.seed.email=YOUR_ADMIN_EMAIL
+admin.seed.password=YOUR_ADMIN_PASSWORD
+
+# Geliştirmeye özel: örnek veri ve ayrıntılı log
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+app.seed.data=true
+logging.level.com.foodboxd=DEBUG

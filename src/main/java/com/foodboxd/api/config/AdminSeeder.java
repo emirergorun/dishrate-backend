@@ -20,17 +20,23 @@ public class AdminSeeder implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
     private final MemberCodeGenerator memberCodeGenerator;
 
-    @Value("${admin.seed.username}")
+    @Value("${admin.seed.username:}")
     private String adminUsername;
 
-    @Value("${admin.seed.email}")
+    @Value("${admin.seed.email:}")
     private String adminEmail;
 
-    @Value("${admin.seed.password}")
+    @Value("${admin.seed.password:}")
     private String adminPassword;
 
     @Override
     public void run(String... args) {
+        // Sunucuda admin bilgisi ortam değişkeniyle bir kez verilir (2.13);
+        // verilmemişse uygulama açılmaya devam eder, yalnız bu adım atlanır.
+        if (adminEmail.isBlank() || adminPassword.isBlank()) {
+            log.warn("Admin bilgisi verilmedi (ADMIN_SEED_EMAIL / ADMIN_SEED_PASSWORD); admin oluşturma atlandı.");
+            return;
+        }
         if (userRepository.existsByEmail(adminEmail)) {
             log.info("Admin hesabı zaten mevcut: {}", adminEmail);
             return;
