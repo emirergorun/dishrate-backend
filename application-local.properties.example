@@ -21,6 +21,9 @@ admin.seed.username=admin
 admin.seed.email=YOUR_ADMIN_EMAIL
 admin.seed.password=YOUR_ADMIN_PASSWORD
 
+# E-posta (Resend, 2.6) — boş bırakılırsa mail gönderilmez, yalnız log'a yazılır
+app.mail.resend-api-key=
+
 # Geliştirmeye özel: örnek veri ve ayrıntılı log
 spring.jpa.show-sql=true
 spring.jpa.properties.hibernate.format_sql=true
