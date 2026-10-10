@@ -44,7 +44,7 @@ public class AdminSeeder implements CommandLineRunner {
 
         User admin = User.builder()
                 .username(adminUsername)
-                .firstName("Dishrate")
+                .firstName("Decouva")
                 .lastName("Admin")
                 .email(adminEmail)
                 .passwordHash(passwordEncoder.encode(adminPassword))

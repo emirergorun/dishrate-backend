@@ -14,7 +14,7 @@
     <groupId>com.foodboxd</groupId>
     <artifactId>api</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>Dishrate API</name>
+    <name>Decouva API</name>
     <description>Dishrate - Yemek ve Restoran Değerlendirme Platformu</description>
 
     <properties>
