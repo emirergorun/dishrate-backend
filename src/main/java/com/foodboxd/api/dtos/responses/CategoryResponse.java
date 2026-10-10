@@ -11,4 +11,7 @@ public class CategoryResponse {
 
     private Long categoryId;
     private String name;
+    /** Değişmeyen anahtar; istemci süzgeci ve ikonu buna bağlar (2.10b). */
+    private String slug;
+    private Integer sortOrder;
 }

@@ -15,6 +15,7 @@ import com.foodboxd.api.exceptions.ResourceNotFoundException;
 import com.foodboxd.api.repositories.CategoryRepository;
 import com.foodboxd.api.repositories.MenuItemRepository;
 import com.foodboxd.api.repositories.RestaurantRepository;
+import com.foodboxd.api.utils.CategorySlug;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
@@ -44,13 +45,34 @@ public class MenuItemService {
                     "Bu kategori zaten var."
             );
         }
-        Category category = Category.builder().name(request.getName()).build();
+        String slug = CategorySlug.of(request.getName());
+        if (categoryRepository.existsBySlug(slug)) {
+            throw new ResourceAlreadyExistsException("Bu kategori zaten var.");
+        }
+        Category category = Category.builder()
+                .name(request.getName())
+                .slug(slug)
+                .sortOrder(categoryRepository.maxSortOrder() + 1)
+                .build();
         Category saved = categoryRepository.save(category);
         log.info("Category created successfully. ID: {}", saved.getCategoryId());
-        return CategoryResponse.builder()
-                .categoryId(saved.getCategoryId())
-                .name(saved.getName())
-                .build();
+        return toCategoryResponse(saved);
+    }
+
+    /**
+     * İstemcinin gönderdiği kategori (2.10b): önce anahtar olarak aranır,
+     * bulunamazsa ad olarak — telefondaki eski sürüm hâlâ adı gönderiyor.
+     * Boşsa "süzgeç yok" anlamında boş metin döner. Bilinmeyen değer kendi
+     * anahtar biçimine çevrilir; hiçbir kategoriyle eşleşmez, sonuç boş olur.
+     */
+    @Transactional(readOnly = true)
+    public String resolveCategorySlug(String param) {
+        if (param == null || param.isBlank()) return "";
+        String value = param.trim();
+        if (categoryRepository.existsBySlug(value)) return value;
+        return categoryRepository.findFirstByNameIgnoreCase(value)
+                .map(Category::getSlug)
+                .orElse(CategorySlug.of(value));
     }
 
     // -----------------------------------------------------------------------
@@ -137,9 +159,9 @@ public class MenuItemService {
     }
 
     @Transactional(readOnly = true)
-    public List<MenuItemResponse> getByCategory(String categoryName) {
-        log.debug("Fetching menu items by category: {}", categoryName);
-        return menuItemRepository.findByCategory_NameIgnoreCase(categoryName)
+    public List<MenuItemResponse> getByCategory(String category) {
+        log.debug("Fetching menu items by category: {}", category);
+        return menuItemRepository.findByCategory_Slug(resolveCategorySlug(category))
                 .stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
@@ -189,13 +211,20 @@ public class MenuItemService {
     // -----------------------------------------------------------------------
     @Transactional(readOnly = true)
     public List<CategoryResponse> getAllCategories() {
-        return categoryRepository.findAll()
+        // Uygulamanın kategori çipleri bu listeden, bu sırayla (2.10b).
+        return categoryRepository.findAllOrdered()
                 .stream()
-                .map(c -> CategoryResponse.builder()
-                        .categoryId(c.getCategoryId())
-                        .name(c.getName())
-                        .build())
+                .map(MenuItemService::toCategoryResponse)
                 .collect(Collectors.toList());
+    }
+
+    public static CategoryResponse toCategoryResponse(Category c) {
+        return CategoryResponse.builder()
+                .categoryId(c.getCategoryId())
+                .name(c.getName())
+                .slug(c.getSlug())
+                .sortOrder(c.getSortOrder())
+                .build();
     }
 
     // -----------------------------------------------------------------------
@@ -229,13 +258,9 @@ public class MenuItemService {
     // Public: Entity → Response DTO (used by other services)
     // -----------------------------------------------------------------------
     public MenuItemResponse toResponse(MenuItem menuItem) {
-        CategoryResponse categoryResponse = null;
-        if (menuItem.getCategory() != null) {
-            categoryResponse = CategoryResponse.builder()
-                    .categoryId(menuItem.getCategory().getCategoryId())
-                    .name(menuItem.getCategory().getName())
-                    .build();
-        }
+        CategoryResponse categoryResponse = menuItem.getCategory() == null
+                ? null
+                : toCategoryResponse(menuItem.getCategory());
 
         return MenuItemResponse.builder()
                 .menuItemId(menuItem.getMenuItemId())

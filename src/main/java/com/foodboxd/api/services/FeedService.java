@@ -63,11 +63,13 @@ public class FeedService {
             new Section("top-rated", List.of(), ZERO_RATING, BY_RATING, 0),
             new Section("weekly", List.of(), HIGH_RATING, BY_NEWEST, 0),
             new Section("most-wanted", List.of(), ZERO_RATING, BY_RATING, TOP_RATED_STRIP_SIZE),
+            // Kategoriler anahtarla (2.10b): ad değişse de bölümler bozulmaz.
+            // Eski listedeki "Salata" hiç var olmayan bir kategoriydi, çıkarıldı.
             new Section("cheat-meal",
-                    List.of("Burger", "Pizza", "Tatlı", "Türk Mutfağı", "İtalyan", "Noodle", "Sandviç"),
+                    List.of("burger", "pizza", "tatli", "turk-mutfagi", "italyan", "noodle", "sandvic"),
                     ZERO_RATING, BY_RATING, 0),
-            new Section("healthy", List.of("Vegan", "Salata", "Kahvaltı", "Meze"), ZERO_RATING, BY_RATING, 0),
-            new Section("hidden-gems", List.of("Meze", "Noodle", "Vegan", "Tavuk", "Ev Yemeği"),
+            new Section("healthy", List.of("vegan", "kahvalti", "meze"), ZERO_RATING, BY_RATING, 0),
+            new Section("hidden-gems", List.of("meze", "noodle", "vegan", "tavuk", "ev-yemegi"),
                     ZERO_RATING, BY_RATING, 0));
 
     /** İlçede bu sayıdan az sonuç varsa il geneline düşülür. */
@@ -83,7 +85,7 @@ public class FeedService {
     @Transactional(readOnly = true)
     public List<FeedSectionResponse> feed(String city, String district, String category, int limit) {
         String cityKey = clean(city);
-        String categoryKey = clean(category);
+        String categoryKey = menuItemService.resolveCategorySlug(category);
         String districtKey = hasEnoughInDistrict(cityKey, clean(district), categoryKey) ? clean(district) : "";
         if (!clean(district).isEmpty() && districtKey.isEmpty()) {
             log.debug("İlçede yeterli içerik yok ({}), il geneline düşüldü.", district);
@@ -106,7 +108,7 @@ public class FeedService {
                 .orElseThrow(() -> new ResourceNotFoundException("Bilinmeyen bölüm: " + key));
 
         String cityKey = clean(city);
-        String categoryKey = clean(category);
+        String categoryKey = menuItemService.resolveCategorySlug(category);
         String districtKey = hasEnoughInDistrict(cityKey, clean(district), categoryKey) ? clean(district) : "";
         long offset = found.skip() + (long) page * size;
         return query(found, cityKey, districtKey, categoryKey, offset, size)
@@ -129,7 +131,7 @@ public class FeedService {
 
     /**
      * Seçili kategori çipi bölümün kendi kategorileriyle kesiştirilir:
-     * "Burger" seçiliyken "Diyet dostu" bölümü hiç sorgulanmadan boş döner.
+     * "burger" seçiliyken "Diyet dostu" bölümü hiç sorgulanmadan boş döner.
      */
     private Page<MenuItem> query(Section b, String cityKey, String districtKey, String categoryKey,
                                    long offset, int pageSize) {

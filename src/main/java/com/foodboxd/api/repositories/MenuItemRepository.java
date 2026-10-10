@@ -20,7 +20,7 @@ public interface MenuItemRepository extends JpaRepository<MenuItem, Long> {
 
     List<MenuItem> findByCategory_CategoryId(Long categoryId);
 
-    List<MenuItem> findByCategory_NameIgnoreCase(String categoryName);
+    List<MenuItem> findByCategory_Slug(String slug);
 
     Optional<MenuItem> findByRestaurant_RestaurantIdAndName(Long restaurantId, String name);
 
@@ -77,6 +77,8 @@ public interface MenuItemRepository extends JpaRepository<MenuItem, Long> {
      * <p>Daha önce istemci tüm yemekleri çekip bölümleri kendisi hesaplıyordu;
      * 1.400 öğede bu her açılışta yarım megabayt indirmek demekti.
      *
+     * <p>Kategoriler anahtarla ({@code slug}) süzülür, ada bakılmaz (2.10b).
+     *
      * <p>{@code catCount} parametresi JPQL'in boş koleksiyonla baş edememesi
      * yüzünden var: 0 ise kategori süzgeci hiç uygulanmaz.
      *
@@ -90,7 +92,7 @@ public interface MenuItemRepository extends JpaRepository<MenuItem, Long> {
               JOIN r.address a
             WHERE (:city = '' OR LOWER(a.city) = LOWER(:city))
               AND (:district = '' OR LOWER(a.district) = LOWER(:district))
-              AND (:catCount = 0 OR mi.category.name IN :categories)
+              AND (:catCount = 0 OR mi.category.slug IN :categories)
               AND mi.averageRating >= :minRating
             """)
     Page<MenuItem> findForFeed(@Param("city") String city,

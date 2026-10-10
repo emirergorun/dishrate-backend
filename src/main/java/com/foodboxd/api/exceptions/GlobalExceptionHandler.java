@@ -131,6 +131,16 @@ public class GlobalExceptionHandler {
     }
 
     // -----------------------------------------------------------------------
+    // Too Many Requests (429) — hatalı giriş kilidi (2.9)
+    // -----------------------------------------------------------------------
+    @ExceptionHandler(TooManyRequestsException.class)
+    public ResponseEntity<ErrorResponse> handleTooManyRequests(TooManyRequestsException ex) {
+        log.warn("Too many requests: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(new ErrorResponse(
+                HttpStatus.TOO_MANY_REQUESTS.value(), "too_many_requests", ex.getMessage()));
+    }
+
+    // -----------------------------------------------------------------------
     // Bad Credentials (401)
     // -----------------------------------------------------------------------
     @ExceptionHandler(BadCredentialsException.class)

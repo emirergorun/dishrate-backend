@@ -4,6 +4,7 @@ import com.foodboxd.api.entities.*;
 import com.foodboxd.api.repositories.*;
 import jakarta.persistence.EntityManager;
 import com.foodboxd.api.services.MemberCodeGenerator;
+import com.foodboxd.api.utils.CategorySlug;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -247,7 +248,8 @@ public class MockDataSeeder implements CommandLineRunner {
         Map<String, Category> map = new LinkedHashMap<>();
         for (String name : CATEGORIES) {
             map.put(name, categoryRepository.findByName(name)
-                    .orElseGet(() -> categoryRepository.save(Category.builder().name(name).build())));
+                    .orElseGet(() -> categoryRepository.save(
+                            Category.create(name, CategorySlug.defaultOrder(name)))));
         }
         return map;
     }

@@ -4,12 +4,14 @@ import com.foodboxd.api.dtos.requests.CreateRestaurantRequest;
 import com.foodboxd.api.dtos.requests.UpdateRestaurantRequest;
 import com.foodboxd.api.dtos.responses.AddressResponse;
 import com.foodboxd.api.dtos.responses.RestaurantResponse;
+import com.foodboxd.api.entities.Category;
 import com.foodboxd.api.entities.Address;
 import com.foodboxd.api.entities.Restaurant;
 import com.foodboxd.api.entities.User;
 import com.foodboxd.api.entities.UserRole;
 import com.foodboxd.api.exceptions.ResourceNotFoundException;
 import com.foodboxd.api.repositories.AddressRepository;
+import com.foodboxd.api.repositories.CategoryRepository;
 import com.foodboxd.api.repositories.MenuItemRepository;
 import com.foodboxd.api.repositories.RestaurantRepository;
 import com.foodboxd.api.utils.SearchText;
@@ -34,6 +36,7 @@ public class RestaurantService {
     private final RestaurantRepository restaurantRepository;
     private final AddressRepository addressRepository;
     private final MenuItemRepository menuItemRepository;
+    private final CategoryRepository categoryRepository;
 
     // -----------------------------------------------------------------------
     // Create a restaurant
@@ -197,8 +200,11 @@ public class RestaurantService {
     // Public: Entity → Response DTO (used by other services)
     // -----------------------------------------------------------------------
     public RestaurantResponse toResponse(Restaurant restaurant) {
-        return toResponse(restaurant, primaryCategory(
-                menuItemRepository.countCategoriesOfRestaurant(restaurant.getRestaurantId()), 0));
+        String category = primaryCategory(
+                menuItemRepository.countCategoriesOfRestaurant(restaurant.getRestaurantId()), 0);
+        String slug = category == null ? null
+                : categoryRepository.findByName(category).map(Category::getSlug).orElse(null);
+        return toResponse(restaurant, category, slug);
     }
 
     /**
@@ -211,9 +217,17 @@ public class RestaurantService {
             counts.computeIfAbsent((Long) row[0], k -> new ArrayList<>())
                     .add(new Object[]{row[1], row[2]});
         }
+        // Ad → anahtar tek sorguda; harita yüzlerce restoran istiyor.
+        Map<String, String> slugByName = new HashMap<>();
+        for (Category c : categoryRepository.findAll()) {
+            if (c.getSlug() != null) slugByName.put(c.getName(), c.getSlug());
+        }
         return restaurants.stream()
-                .map(r -> toResponse(r, primaryCategory(
-                        counts.getOrDefault(r.getRestaurantId(), List.of()), 0)))
+                .map(r -> {
+                    String category = primaryCategory(
+                            counts.getOrDefault(r.getRestaurantId(), List.of()), 0);
+                    return toResponse(r, category, category == null ? null : slugByName.get(category));
+                })
                 .collect(Collectors.toList());
     }
 
@@ -226,7 +240,7 @@ public class RestaurantService {
                 .orElse(null);
     }
 
-    private RestaurantResponse toResponse(Restaurant restaurant, String categoryName) {
+    private RestaurantResponse toResponse(Restaurant restaurant, String categoryName, String categorySlug) {
         AddressResponse addressResponse = AddressResponse.builder()
                 .addressId(restaurant.getAddress().getAddressId())
                 .city(restaurant.getAddress().getCity())
@@ -243,6 +257,7 @@ public class RestaurantService {
                 .address(addressResponse)
                 .claimable(restaurant.isClaimable())
                 .categoryName(categoryName)
+                .categorySlug(categorySlug)
                 .build();
     }
 }

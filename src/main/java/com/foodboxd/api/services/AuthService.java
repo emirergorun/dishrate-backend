@@ -30,6 +30,7 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
     private final UserService userService;
+    private final LoginAttemptService loginAttemptService;
 
     @Value("${jwt.access-token-expiration-ms}")
     private long accessTokenExpirationMs;
@@ -47,14 +48,17 @@ public class AuthService {
         // "Emir@Dishrate.com" ile "emir@dishrate.com" aynı hesaba gider.
         String identifier = UserService.normalize(request.getEmail());
         log.info("Login attempt for identifier: {}", identifier);
+        loginAttemptService.checkNotLocked(identifier);
 
         User user = userRepository.findByEmail(identifier)
                 .or(() -> userRepository.findByUsername(identifier))
-                .orElseThrow(() -> new BadCredentialsException("Giriş bilgileri hatalı."));
+                .orElse(null);
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+        if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+            loginAttemptService.recordFailure(identifier);
             throw new BadCredentialsException("Giriş bilgileri hatalı.");
         }
+        loginAttemptService.recordSuccess(identifier);
 
         // Eski refresh token'ları sil (her cihazda tek aktif token)
         refreshTokenRepository.deleteByUser(user);

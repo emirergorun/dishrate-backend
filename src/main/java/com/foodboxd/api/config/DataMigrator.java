@@ -5,6 +5,7 @@ import com.foodboxd.api.entities.User;
 import com.foodboxd.api.repositories.CategoryRepository;
 import com.foodboxd.api.services.MemberCodeGenerator;
 import jakarta.persistence.EntityManager;
+import com.foodboxd.api.utils.CategorySlug;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -48,13 +49,53 @@ public class DataMigrator implements CommandLineRunner {
         migrateKebabCategory();
         for (String name : List.of("Türk Mutfağı", "Ev Yemeği")) {
             if (!categoryRepository.existsByName(name)) {
-                categoryRepository.save(Category.builder().name(name).build());
+                categoryRepository.save(Category.create(name, CategorySlug.defaultOrder(name)));
                 log.info("Veri göçü: '{}' kategorisi eklendi.", name);
             }
         }
         replaceBrokenPhotos();
         backfillRatingCounts();
         backfillMemberCodes();
+        backfillCategoryKeys();
+    }
+
+    /**
+     * Kategori anahtarı ve sırası (2.10b). Anahtar yalnız boşsa yazılır:
+     * bir kez verildikten sonra ad değişse de aynı kalmalı. Bilinen 13
+     * kategori çip sırasını {@link CategorySlug#DEFAULT_ORDER}'dan alır,
+     * diğerleri sona eklenir.
+     */
+    private void backfillCategoryKeys() {
+        List<Category> all = categoryRepository.findAll();
+        Set<String> used = new HashSet<>();
+        int maxOrder = 0;
+        for (Category c : all) {
+            if (c.getSlug() != null) used.add(c.getSlug());
+            if (c.getSortOrder() != null) maxOrder = Math.max(maxOrder, c.getSortOrder());
+        }
+        // Bilinen kategorilerin sırası 1–13'te ayrılmış; yeniler onların arkasına.
+        maxOrder = Math.max(maxOrder, CategorySlug.DEFAULT_ORDER.size());
+        int changed = 0;
+        for (Category c : all) {
+            boolean dirty = false;
+            if (c.getSlug() == null) {
+                String base = CategorySlug.of(c.getName());
+                String slug = base;
+                for (int n = 2; used.contains(slug); n++) slug = base + "-" + n;
+                used.add(slug);
+                c.setSlug(slug);
+                dirty = true;
+            }
+            if (c.getSortOrder() == null) {
+                Integer order = CategorySlug.defaultOrder(c.getName());
+                c.setSortOrder(order != null ? order : ++maxOrder);
+                dirty = true;
+            }
+            if (dirty) changed++;
+        }
+        if (changed > 0) {
+            log.info("Veri göçü: {} kategoriye anahtar ve sıra verildi.", changed);
+        }
     }
 
     /**

@@ -8,6 +8,7 @@ import com.foodboxd.api.repositories.AddressRepository;
 import com.foodboxd.api.repositories.CategoryRepository;
 import com.foodboxd.api.repositories.MenuItemRepository;
 import com.foodboxd.api.repositories.RestaurantRepository;
+import com.foodboxd.api.utils.CategorySlug;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -77,10 +78,8 @@ public class DataSeeder implements CommandLineRunner {
         log.info("Örnek restoran/menü verisi tohumlanıyor...");
 
         // Kategoriler
-        for (String c : new String[]{
-                "Burger", "Pizza", "Türk Mutfağı", "Ev Yemeği", "Sushi", "Tatlı", "Kahvaltı",
-                "İtalyan", "Vegan", "Meze", "Noodle", "Tavuk", "Sandviç"}) {
-            categories.put(c, categoryRepository.save(Category.builder().name(c).build()));
+        for (String c : CategorySlug.DEFAULT_ORDER) {
+            categories.put(c, categoryRepository.save(Category.create(c, CategorySlug.defaultOrder(c))));
         }
 
         // ── Burger ──

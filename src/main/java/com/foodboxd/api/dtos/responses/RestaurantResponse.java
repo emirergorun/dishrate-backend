@@ -30,4 +30,7 @@ public class RestaurantResponse {
      * Burgercide pizza da satılıyorsa çoğunluk hangisiyse o. Menü boşsa null.
      */
     private String categoryName;
+
+    /** Aynı kategorinin değişmeyen anahtarı; harita ikonu buna bağlanır (2.10b). */
+    private String categorySlug;
 }
