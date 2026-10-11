@@ -79,13 +79,14 @@ public class PasswordResetService {
                 .build());
 
         MailTemplates.Mail mail = MailTemplates.withCode(
-                "Decouva şifre sıfırlama kodun",
+                "Şifre sıfırlama talebin",
                 "Şifreni sıfırla",
                 List.of("Merhaba " + user.getFirstName() + ",",
                         "Şifreni sıfırlamak için bu kodu uygulamaya gir:"),
                 code,
-                List.of("Kod " + CODE_MINUTES + " dakika geçerli.",
-                        "Bu isteği sen yapmadıysan bu maili yok sayabilirsin; şifren değişmedi."));
+                List.of("Kod " + CODE_MINUTES + " dakika geçerlidir.",
+                        "Bu talebi sen yapmadıysan endişelenme, şifren değişmedi. Hesabınla ilgili bir "
+                                + "şüphen varsa bu maili yanıtlayarak bize bildirebilirsin."));
         try {
             mailService.send(user.getEmail(), mail.subject(), mail.text(), mail.html());
         } catch (MailDeliveryException e) {
