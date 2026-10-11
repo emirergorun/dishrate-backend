@@ -25,12 +25,39 @@ public final class MailTemplates {
      */
     public static Mail build(String subject, String heading, List<String> paragraphs,
                              String buttonLabel, String buttonUrl) {
+        return build(subject, heading, paragraphs, null, List.of(), buttonLabel, buttonUrl);
+    }
+
+    /**
+     * Ortasında büyük, harf aralıklı bir kod kutusu olan mail (şifre sıfırlama,
+     * doğrulama). [before] koddan önce, [after] sonra gelen paragraflar.
+     */
+    public static Mail withCode(String subject, String heading, List<String> before,
+                                String code, List<String> after) {
+        return build(subject, heading, before, code, after, null, null);
+    }
+
+    private static Mail build(String subject, String heading, List<String> paragraphs,
+                              String code, List<String> after,
+                              String buttonLabel, String buttonUrl) {
         StringBuilder text = new StringBuilder(heading).append("\n\n");
         StringBuilder body = new StringBuilder();
         for (String p : paragraphs) {
             text.append(p).append("\n\n");
             body.append("<p style=\"margin:0 0 16px;font-size:15px;line-height:1.5;color:#1b1a18\">")
                     .append(HtmlUtils.htmlEscape(p)).append("</p>");
+        }
+        if (code != null) {
+            text.append(code).append("\n\n");
+            body.append("<div style=\"margin:8px 0 24px;padding:16px 0;text-align:center;background:#ffffff;"
+                    + "border-radius:12px;font-size:32px;font-weight:700;letter-spacing:10px;color:#1b1a18;"
+                    + "font-family:SFMono-Regular,Menlo,Consolas,monospace\">")
+                    .append(HtmlUtils.htmlEscape(code)).append("</div>");
+            for (String p : after) {
+                text.append(p).append("\n\n");
+                body.append("<p style=\"margin:0 0 16px;font-size:15px;line-height:1.5;color:#1b1a18\">")
+                        .append(HtmlUtils.htmlEscape(p)).append("</p>");
+            }
         }
         if (buttonLabel != null && buttonUrl != null) {
             text.append(buttonLabel).append(": ").append(buttonUrl).append("\n\n");

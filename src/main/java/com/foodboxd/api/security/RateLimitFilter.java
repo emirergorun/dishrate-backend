@@ -23,15 +23,17 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * <ul>
  *   <li>Giriş yapmamış istek: IP başına dakikada {@value #ANONYMOUS_PER_MINUTE}.</li>
- *   <li>Giriş ve kayıt denemesi: IP başına dakikada {@value #AUTH_PER_MINUTE};
- *       kayıt ayrıca saatte {@value #REGISTER_PER_HOUR} (toplu sahte hesap).</li>
+ *   <li>Giriş, kayıt ve şifre sıfırlama: IP başına dakikada {@value #AUTH_PER_MINUTE};
+ *       kayıt ayrıca saatte {@value #REGISTER_PER_HOUR} (toplu sahte hesap), kod
+ *       isteme saatte {@value #FORGOT_PER_HOUR} (mail; hesap başı sınır
+ *       {@code PasswordResetService}'te).</li>
  *   <li>Girişli kullanıcının yazma isteği (puan, yorum, istek listesi, bildirim…):
  *       kullanıcı başına dakikada {@value #WRITES_PER_MINUTE}; fotoğraf yükleme
  *       dakikada {@value #UPLOADS_PER_MINUTE}. Normal kullanım bunlara yaklaşmaz.</li>
  * </ul>
  *
  * <p>Hesap başına hatalı giriş kilidi ayrı: {@code LoginAttemptService}.
- * Mail gönderen uçlar (2.7/2.8) gelince sınırları buraya eklenecek.
+ * E-posta doğrulama (2.8) gelince sınırı buraya eklenecek.
  *
  * <p>Sabit pencere, bellekte: tek sunucu için yeterli. IP
  * {@code getRemoteAddr()}'dan okunur; sunucu vekil (platform/Cloudflare)
@@ -46,6 +48,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     static final int ANONYMOUS_PER_MINUTE = 120;
     static final int AUTH_PER_MINUTE = 10;
     static final int REGISTER_PER_HOUR = 20;
+    static final int FORGOT_PER_HOUR = 10;
     static final int WRITES_PER_MINUTE = 60;
     static final int UPLOADS_PER_MINUTE = 10;
 
@@ -69,12 +72,16 @@ public class RateLimitFilter extends OncePerRequestFilter {
         String ip = request.getRemoteAddr();
         boolean login = "POST".equals(method) && path.equals("/auth/login");
         boolean register = "POST".equals(method) && path.equals("/auth/register");
+        // Şifremi unuttum (2.7): kod isteme mail gönderir, kod girme tahmin edilebilir.
+        boolean forgot = "POST".equals(method) && path.equals("/auth/password/forgot");
+        boolean reset = "POST".equals(method) && path.equals("/auth/password/reset");
         User user = currentUser();
 
         boolean allowed;
-        if (login || register) {
+        if (login || register || forgot || reset) {
             allowed = allow("auth:" + ip, AUTH_PER_MINUTE, MINUTE_MS)
-                    && (!register || allow("register:" + ip, REGISTER_PER_HOUR, HOUR_MS));
+                    && (!register || allow("register:" + ip, REGISTER_PER_HOUR, HOUR_MS))
+                    && (!forgot || allow("forgot:" + ip, FORGOT_PER_HOUR, HOUR_MS));
         } else if (user == null) {
             // Görseller sayılmaz: keşfette kaydıran bir misafir yalnız
             // fotoğraflarla sınırı aşardı; dosyalar önbellekli ve salt okunur.
