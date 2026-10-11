@@ -48,6 +48,7 @@ public class AdminSeeder implements CommandLineRunner {
                 .lastName("Admin")
                 .email(adminEmail)
                 .passwordHash(passwordEncoder.encode(adminPassword))
+                .emailVerifiedAt(java.time.Instant.now())
                 .role(UserRole.ADMIN)
                 .memberCode(memberCodeGenerator.next())
                 .build();

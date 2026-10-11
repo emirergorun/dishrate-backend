@@ -3,10 +3,12 @@ package com.foodboxd.api.controllers;
 import com.foodboxd.api.dtos.requests.ChangePasswordRequest;
 import com.foodboxd.api.dtos.requests.DeleteAccountRequest;
 import com.foodboxd.api.dtos.requests.UpdateUserRequest;
+import com.foodboxd.api.dtos.requests.VerifyEmailRequest;
 import com.foodboxd.api.dtos.responses.UserResponse;
 import com.foodboxd.api.entities.User;
 import com.foodboxd.api.security.Ownership;
 import com.foodboxd.api.services.AccountDeletionService;
+import com.foodboxd.api.services.EmailVerificationService;
 import com.foodboxd.api.services.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,7 @@ public class UserController {
 
     private final UserService userService;
     private final AccountDeletionService accountDeletionService;
+    private final EmailVerificationService emailVerificationService;
 
     // NOT: Kayıt işlemi /auth/register endpoint'inden yapılır.
 
@@ -77,6 +80,28 @@ public class UserController {
             @AuthenticationPrincipal User currentUser,
             @Valid @RequestBody DeleteAccountRequest request) {
         accountDeletionService.deleteOwnAccount(currentUser, request.getPassword());
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * POST /api/v1/users/me/email-verification
+     * Yeni doğrulama kodu gönderir (2.8). Saatte 3'ten fazlası 429, zaten
+     * doğrulanmışsa 409.
+     */
+    @PostMapping("/me/email-verification")
+    public ResponseEntity<Void> resendEmailVerification(@AuthenticationPrincipal User currentUser) {
+        emailVerificationService.resend(currentUser.getUserId());
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * POST /api/v1/users/me/email-verification/verify
+     * Koddaki e-postayı doğrular (2.8). Hatalı/süresi dolmuş kod 400.
+     */
+    @PostMapping("/me/email-verification/verify")
+    public ResponseEntity<Void> verifyEmail(@AuthenticationPrincipal User currentUser,
+                                            @Valid @RequestBody VerifyEmailRequest request) {
+        emailVerificationService.verify(currentUser.getUserId(), request.getCode());
         return ResponseEntity.noContent().build();
     }
 }

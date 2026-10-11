@@ -57,6 +57,22 @@ public class DataMigrator implements CommandLineRunner {
         backfillRatingCounts();
         backfillMemberCodes();
         backfillCategoryKeys();
+        markSeedAccountsVerified();
+    }
+
+    /**
+     * E-posta doğrulama (2.8): mock hesaplar ve admin doğrulanmış sayılır
+     * (gerçek posta kutuları yok; test verisinde hatırlatma çıkmasın). Gerçek
+     * hesaplar dokunulmadan kalır.
+     */
+    private void markSeedAccountsVerified() {
+        int marked = entityManager.createNativeQuery(
+                        "update users set email_verified_at = now() where email_verified_at is null "
+                                + "and (email like '%@mock.test' or role = 'ADMIN')")
+                .executeUpdate();
+        if (marked > 0) {
+            log.info("Veri göçü: {} mock/admin hesap doğrulanmış sayıldı.", marked);
+        }
     }
 
     /**

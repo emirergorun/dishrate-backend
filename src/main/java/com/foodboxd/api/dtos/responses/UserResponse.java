@@ -35,4 +35,6 @@ public class UserResponse {
     // Adisyon (1.9): kayıt anı ve üye kodu. İç kimlik yerine kod gösterilir.
     private Instant createdAt;
     private String memberCode;
+    /** Yalnız kişinin kendi kaydında anlamlı (2.8). */
+    private boolean emailVerified;
 }

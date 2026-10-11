@@ -14,7 +14,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -43,14 +42,13 @@ public class PasswordResetService {
     static final int MAX_ATTEMPTS = 5;
     static final int MAX_CODES_PER_HOUR = 3;
 
-    private static final SecureRandom RANDOM = new SecureRandom();
-
     private final UserRepository userRepository;
     private final PasswordResetCodeRepository codeRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final MailService mailService;
     private final LoginAttemptService loginAttemptService;
+    private final OneTimeCodes oneTimeCodes;
 
     @Transactional
     public void requestCode(String identifier) {
@@ -69,10 +67,10 @@ public class PasswordResetService {
         }
         codeRepository.invalidateAll(user, now);
 
-        String code = String.format("%06d", RANDOM.nextInt(1_000_000));
+        String code = oneTimeCodes.generate();
         codeRepository.save(PasswordResetCode.builder()
                 .user(user)
-                .codeHash(passwordEncoder.encode(code))
+                .codeHash(oneTimeCodes.hash(code))
                 .expiresAt(now.plus(Duration.ofMinutes(CODE_MINUTES)))
                 .attempts(0)
                 .createdAt(now)
@@ -108,7 +106,7 @@ public class PasswordResetService {
             reset.setUsedAt(now);
             throw new IllegalArgumentException("Kodun süresi doldu, yeni kod iste.");
         }
-        if (!passwordEncoder.matches(code, reset.getCodeHash())) {
+        if (!oneTimeCodes.matches(code, reset.getCodeHash())) {
             reset.setAttempts(reset.getAttempts() + 1);
             if (reset.getAttempts() >= MAX_ATTEMPTS) {
                 reset.setUsedAt(now);

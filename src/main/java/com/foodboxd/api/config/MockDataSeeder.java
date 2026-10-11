@@ -268,6 +268,7 @@ public class MockDataSeeder implements CommandLineRunner {
                     .lastName(LAST_NAMES[rnd.nextInt(LAST_NAMES.length)])
                     .email("kullanici" + no + EMAIL_DOMAIN)
                     .passwordHash(hash)
+                    .emailVerifiedAt(java.time.Instant.now())   // mock adresler gerçek değil (2.8)
                     .role(UserRole.USER)
                     .memberCode(nextCode(codes))
                     .build());

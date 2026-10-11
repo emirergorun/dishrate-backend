@@ -80,6 +80,10 @@ public class User {
     @Column(name = "member_code", unique = true, length = 12)
     private String memberCode;
 
+    /** E-posta doğrulandığı an (2.8); boşsa doğrulanmamış. Yumuşak doğrulama: kısıt yok. */
+    @Column(name = "email_verified_at")
+    private Instant emailVerifiedAt;
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Rating> ratings;
 

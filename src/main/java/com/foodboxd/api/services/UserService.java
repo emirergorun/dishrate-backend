@@ -33,6 +33,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final ProfanityFilter profanityFilter;
     private final MemberCodeGenerator memberCodeGenerator;
+    private final EmailVerificationService emailVerificationService;
 
     // -----------------------------------------------------------------------
     // Create a new user
@@ -72,6 +73,8 @@ public class UserService {
 
         User saved = userRepository.save(user);
         log.info("User created successfully. ID: {}", saved.getUserId());
+        // E-posta doğrulama kodu (2.8); gönderilemezse kayıt yine tamamlanır.
+        emailVerificationService.sendOnRegistration(saved);
         return toResponse(saved);
     }
 
@@ -224,6 +227,7 @@ public class UserService {
                 .nameChangeAvailableAt(nameChangeAvailableAt)
                 .createdAt(user.getCreatedAt())
                 .memberCode(user.getMemberCode())
+                .emailVerified(user.getEmailVerifiedAt() != null)
                 .build();
     }
 
