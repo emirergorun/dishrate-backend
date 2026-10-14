@@ -51,6 +51,13 @@ public class Rating {
     @Column(name = "hidden", columnDefinition = "boolean not null default false")
     private boolean hidden = false;
 
+    /**
+     * Moderasyonla yorum ve fotoğrafı kaldırıldığı an (2.11a); puan kalır.
+     * Boşsa kaldırılmadı.
+     */
+    @Column(name = "content_removed_at")
+    private java.time.Instant contentRemovedAt;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

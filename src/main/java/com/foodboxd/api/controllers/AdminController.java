@@ -1,11 +1,13 @@
 package com.foodboxd.api.controllers;
 
 import com.foodboxd.api.dtos.requests.ReviewClaimRequest;
+import com.foodboxd.api.dtos.responses.RatingModerationResponse;
 import com.foodboxd.api.dtos.responses.RestaurantClaimResponse;
 import com.foodboxd.api.dtos.responses.UserResponse;
 import com.foodboxd.api.entities.UserRole;
 import com.foodboxd.api.services.AdminService;
 import com.foodboxd.api.services.ClaimService;
+import com.foodboxd.api.services.ModerationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +22,7 @@ public class AdminController {
 
     private final AdminService adminService;
     private final ClaimService claimService;
+    private final ModerationService moderationService;
 
     // ── Sahiplik Talepleri ────────────────────────────────────────────────────
 
@@ -45,6 +48,32 @@ public class AdminController {
             @Valid @RequestBody ReviewClaimRequest request) {
         return ResponseEntity.ok(
                 claimService.review(id, request.getStatus(), request.getAdminNote()));
+    }
+
+    // ── Bildirilen yorumlar (2.11a) ───────────────────────────────────────────
+
+    /** GET /api/v1/admin/ratings/{id}/reports — değerlendirme ve bildirimleri. */
+    @GetMapping("/ratings/{id}/reports")
+    public ResponseEntity<RatingModerationResponse> ratingReports(@PathVariable Long id) {
+        return ResponseEntity.ok(moderationService.reportsOf(id));
+    }
+
+    /**
+     * POST /api/v1/admin/ratings/{id}/remove-content — yorum ve fotoğraf
+     * silinir, puan kalır; bildirimler çözülür.
+     */
+    @PostMapping("/ratings/{id}/remove-content")
+    public ResponseEntity<RatingModerationResponse> removeContent(@PathVariable Long id) {
+        return ResponseEntity.ok(moderationService.removeContent(id));
+    }
+
+    /**
+     * POST /api/v1/admin/ratings/{id}/dismiss-reports — bildirimler yok
+     * sayılır, değerlendirme yeniden görünür.
+     */
+    @PostMapping("/ratings/{id}/dismiss-reports")
+    public ResponseEntity<RatingModerationResponse> dismissReports(@PathVariable Long id) {
+        return ResponseEntity.ok(moderationService.dismissReports(id));
     }
 
     // ── Kullanıcı Yönetimi ────────────────────────────────────────────────────

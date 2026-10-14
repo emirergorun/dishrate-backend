@@ -1,6 +1,7 @@
 package com.foodboxd.api.services;
 
 import com.foodboxd.api.dtos.responses.BlockedUserResponse;
+import com.foodboxd.api.dtos.responses.RatingModerationResponse;
 import com.foodboxd.api.entities.Rating;
 import com.foodboxd.api.entities.RatingReport;
 import com.foodboxd.api.entities.ReportReason;
@@ -17,11 +18,13 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 
 /**
  * Kullanıcı içeriği denetimi (1.7): değerlendirme bildirme ve kullanıcı
- * engelleme. İnceleme ekranı web panelinde gelecek (2.11).
+ * engelleme. İnceleme şimdilik e-postayla ve admin uçlarıyla (2.11a);
+ * web paneli 6.7'de.
  *
  * <p>Yorumcunun kimliği dışarı verilmediği için engelleme değerlendirme
  * üzerinden yapılır: "bu yorumu yazanı engelle".
@@ -42,6 +45,8 @@ public class ModerationService {
     private final RatingReportRepository reportRepository;
     private final UserBlockRepository blockRepository;
     private final UserRepository userRepository;
+    private final ModerationNotifier notifier;
+    private final FileStorageService fileStorageService;
 
     @Transactional
     public void report(User viewer, Long ratingId, ReportReason reason, String note) {
@@ -59,13 +64,75 @@ public class ModerationService {
                 .reason(reason)
                 .note(note == null || note.isBlank() ? null : note.strip())
                 .build());
-        long count = reportRepository.countByRating_RatingId(ratingId);
-        log.info("Rating reported. Rating ID: {}, reason: {}, total reports: {}",
-                ratingId, reason, count);
-        if (count >= HIDE_THRESHOLD && !rating.isHidden()) {
+        // Eşik ve mail yalnız çözülmemiş bildirimleri sayar (2.11a): yok
+        // sayılan bildirimler değerlendirmeyi yeniden gizlemez.
+        long open = reportRepository.countByRating_RatingIdAndResolvedAtIsNull(ratingId);
+        log.info("Rating reported. Rating ID: {}, reason: {}, open reports: {}",
+                ratingId, reason, open);
+        boolean crossed = open >= HIDE_THRESHOLD && !rating.isHidden();
+        if (crossed) {
             rating.setHidden(true);
-            log.warn("Rating hidden after {} reports. Rating ID: {}", count, ratingId);
+            log.warn("Rating hidden after {} reports. Rating ID: {}", open, ratingId);
         }
+        // Destek kutusuna mail: ilk bildirimde ve gizlenince (en fazla iki).
+        if (open == 1) {
+            notifier.firstReport(summary(rating));
+        } else if (crossed) {
+            notifier.hidden(summary(rating), HIDE_THRESHOLD);
+        }
+    }
+
+    // ── Admin (2.11a): bildirim incelemesi ────────────────────────────────
+
+    @Transactional(readOnly = true)
+    public RatingModerationResponse reportsOf(Long ratingId) {
+        return summary(findRating(ratingId));
+    }
+
+    /** Yorum ve fotoğraf kaldırılır, puan kalır; açık bildirimler çözülür. */
+    @Transactional
+    public RatingModerationResponse removeContent(Long ratingId) {
+        Rating rating = findRating(ratingId);
+        String photo = rating.getPhotoUrl();
+        Instant now = Instant.now();
+        reportRepository.resolveAll(ratingId, now);
+        ratingRepository.removeContent(ratingId, now);
+        fileStorageService.deleteByUrl(photo);
+        log.warn("Moderation: content removed. Rating ID: {}", ratingId);
+        return summary(findRating(ratingId));
+    }
+
+    /** Bildirimler yok sayılır; bildirimlerle gizlendiyse yeniden görünür. */
+    @Transactional
+    public RatingModerationResponse dismissReports(Long ratingId) {
+        findRating(ratingId);
+        reportRepository.resolveAll(ratingId, Instant.now());
+        ratingRepository.unhide(ratingId);
+        log.info("Moderation: reports dismissed. Rating ID: {}", ratingId);
+        return summary(findRating(ratingId));
+    }
+
+    private RatingModerationResponse summary(Rating rating) {
+        return RatingModerationResponse.builder()
+                .ratingId(rating.getRatingId())
+                .author(rating.getUser().getUsername())
+                .dish(rating.getMenuItem().getName())
+                .restaurant(rating.getMenuItem().getRestaurant().getName())
+                .score(rating.getScore())
+                .comment(rating.getComment())
+                .photoUrl(rating.getPhotoUrl())
+                .hidden(rating.isHidden())
+                .contentRemovedAt(rating.getContentRemovedAt())
+                .reports(reportRepository.findAllByRating(rating.getRatingId()).stream()
+                        .map(r -> RatingModerationResponse.Report.builder()
+                                .reason(r.getReason().label)
+                                .note(r.getNote())
+                                .reporter(r.getReporter().getUsername())
+                                .createdAt(r.getCreatedAt())
+                                .resolved(r.getResolvedAt() != null)
+                                .build())
+                        .toList())
+                .build();
     }
 
     @Transactional
@@ -109,16 +176,16 @@ public class ModerationService {
 
     /**
      * Bildirimi geri al (şeritteki "Geri al"). Değerlendirme bildirimlerle
-     * gizlendiyse ve sayı eşiğin altına indiyse yeniden görünür. 2.11'de
-     * panelden elle gizleme gelirse bu kural onu da açmamalı; o zaman ayrı bir
-     * alan gerekir.
+     * gizlendiyse ve açık bildirim sayısı eşiğin altına indiyse yeniden
+     * görünür. Moderasyonla kaldırılan içerik ({@code contentRemovedAt}) zaten
+     * boş olduğundan bu kural ona dokunmaz.
      */
     @Transactional
     public void undoReport(User viewer, Long ratingId) {
         Rating rating = findRating(ratingId);
         reportRepository.deleteByRating_RatingIdAndReporter_UserId(ratingId, viewer.getUserId());
         if (rating.isHidden()
-                && reportRepository.countByRating_RatingId(ratingId) < HIDE_THRESHOLD) {
+                && reportRepository.countByRating_RatingIdAndResolvedAtIsNull(ratingId) < HIDE_THRESHOLD) {
             rating.setHidden(false);
         }
     }

@@ -58,4 +58,11 @@ public class RatingReport {
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    /**
+     * İncelendiği an (2.11a): içerik kaldırıldı ya da bildirim yok sayıldı.
+     * Gizleme eşiği yalnız çözülmemiş bildirimleri sayar.
+     */
+    @Column(name = "resolved_at")
+    private java.time.Instant resolvedAt;
 }
