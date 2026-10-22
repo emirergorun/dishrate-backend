@@ -47,8 +47,11 @@ public class DataMigrator implements CommandLineRunner {
     @Transactional
     public void run(String... args) {
         migrateKebabCategory();
-        for (String name : List.of("Türk Mutfağı", "Ev Yemeği")) {
-            if (!categoryRepository.existsByName(name)) {
+        // Başlangıç kategorilerinin hepsi: üretimde örnek veri kapalı olduğu
+        // için başka yerden gelmiyorlar, içe aktarma (2.11b) bunlara dayanıyor.
+        for (String name : CategorySlug.DEFAULT_ORDER) {
+            if (!categoryRepository.existsByName(name)
+                    && !categoryRepository.existsBySlug(CategorySlug.of(name))) {
                 categoryRepository.save(Category.create(name, CategorySlug.defaultOrder(name)));
                 log.info("Veri göçü: '{}' kategorisi eklendi.", name);
             }

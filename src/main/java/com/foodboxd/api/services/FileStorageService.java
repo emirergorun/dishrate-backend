@@ -41,10 +41,35 @@ public class FileStorageService {
         }
     }
 
+    private static final long MAX_IMAGE_BYTES = 5L * 1024 * 1024;
+
+    /**
+     * İçe aktarmanın hazırladığı JPEG'i verilen adla kaydeder (ad içerikten
+     * türetilir; aynı fotoğraf ikinci kez kaydedilmez). Dosya adını döner.
+     */
+    public String storeJpeg(byte[] jpeg, String baseName) {
+        String filename = baseName + ".jpg";
+        Path target = root.resolve(filename).normalize();
+        if (!target.startsWith(root)) {
+            throw new IllegalArgumentException("Geçersiz dosya adı.");
+        }
+        try {
+            if (!Files.exists(target)) Files.write(target, jpeg);
+        } catch (IOException e) {
+            throw new IllegalStateException("Dosya kaydedilemedi.", e);
+        }
+        return filename;
+    }
+
     /** Görseli kaydeder, benzersiz dosya adını döner. */
     public String store(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new IllegalStateException("Dosya boş.");
+        }
+        // Genel yükleme sınırı içe aktarma zip'i için büyük (2.11b); kullanıcı
+        // görseli için eski 5 MB sınırı burada.
+        if (file.getSize() > MAX_IMAGE_BYTES) {
+            throw new IllegalArgumentException("Dosya çok büyük. En fazla 5 MB yükleyebilirsin.");
         }
         String contentType = file.getContentType();
         if (contentType == null || !ALLOWED_TYPES.contains(contentType)) {

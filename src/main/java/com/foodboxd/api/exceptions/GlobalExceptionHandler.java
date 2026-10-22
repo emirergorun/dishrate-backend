@@ -97,7 +97,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),
                 "File Too Large",
-                "Dosya çok büyük. En fazla 5 MB yükleyebilirsin."
+                "Dosya çok büyük. En fazla 200 MB yükleyebilirsin."
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }

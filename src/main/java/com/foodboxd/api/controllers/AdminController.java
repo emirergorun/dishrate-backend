@@ -8,10 +8,15 @@ import com.foodboxd.api.entities.UserRole;
 import com.foodboxd.api.services.AdminService;
 import com.foodboxd.api.services.ClaimService;
 import com.foodboxd.api.services.ModerationService;
+import com.foodboxd.api.services.importer.CatalogImportReport;
+import com.foodboxd.api.services.importer.CatalogImportService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.util.List;
 
@@ -23,6 +28,26 @@ public class AdminController {
     private final AdminService adminService;
     private final ClaimService claimService;
     private final ModerationService moderationService;
+    private final CatalogImportService catalogImportService;
+
+    // ── İçerik içe aktarma (2.11b) ────────────────────────────────────────────
+
+    /**
+     * POST /api/v1/admin/import/catalog
+     * Restoranları, menülerini ve fotoğraflarını tablodan (CSV) aktarır;
+     * fotoğraflar isteğe bağlı zip'te, tablodaki dosya adıyla. Varsayılan
+     * önizleme ({@code dryRun=true}): hiçbir şey yazılmaz, rapor döner.
+     * {@code dryRun=false} ile yazılır; tek bir hata bile varsa hiçbiri.
+     * Kurallar {@code CatalogImportService}'te.
+     */
+    @PostMapping(value = "/import/catalog", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<CatalogImportReport> importCatalog(
+            @RequestPart("csv") MultipartFile csv,
+            @RequestPart(value = "photos", required = false) MultipartFile photos,
+            @RequestParam(defaultValue = "true") boolean dryRun) {
+        String base = ServletUriComponentsBuilder.fromCurrentContextPath().toUriString();
+        return ResponseEntity.ok(catalogImportService.run(csv, photos, dryRun, base));
+    }
 
     // ── Sahiplik Talepleri ────────────────────────────────────────────────────
 
