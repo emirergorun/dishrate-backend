@@ -15,6 +15,7 @@ import com.foodboxd.api.repositories.CategoryRepository;
 import com.foodboxd.api.repositories.MenuItemRepository;
 import com.foodboxd.api.repositories.RestaurantRepository;
 import com.foodboxd.api.utils.SearchText;
+import com.foodboxd.api.utils.CategorySlug;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
@@ -200,11 +201,10 @@ public class RestaurantService {
     // Public: Entity → Response DTO (used by other services)
     // -----------------------------------------------------------------------
     public RestaurantResponse toResponse(Restaurant restaurant) {
-        String category = primaryCategory(
-                menuItemRepository.countCategoriesOfRestaurant(restaurant.getRestaurantId()), 0);
-        String slug = category == null ? null
-                : categoryRepository.findByName(category).map(Category::getSlug).orElse(null);
-        return toResponse(restaurant, category, slug);
+        Object[] top = primaryCategory(
+                menuItemRepository.countCategoriesOfRestaurant(restaurant.getRestaurantId()));
+        return toResponse(restaurant, top == null ? null : (String) top[0],
+                top == null ? null : (String) top[1]);
     }
 
     /**
@@ -215,28 +215,31 @@ public class RestaurantService {
         Map<Long, List<Object[]>> counts = new HashMap<>();
         for (Object[] row : menuItemRepository.countCategoriesPerRestaurant()) {
             counts.computeIfAbsent((Long) row[0], k -> new ArrayList<>())
-                    .add(new Object[]{row[1], row[2]});
-        }
-        // Ad → anahtar tek sorguda; harita yüzlerce restoran istiyor.
-        Map<String, String> slugByName = new HashMap<>();
-        for (Category c : categoryRepository.findAll()) {
-            if (c.getSlug() != null) slugByName.put(c.getName(), c.getSlug());
+                    .add(new Object[]{row[1], row[2], row[3]});
         }
         return restaurants.stream()
                 .map(r -> {
-                    String category = primaryCategory(
-                            counts.getOrDefault(r.getRestaurantId(), List.of()), 0);
-                    return toResponse(r, category, category == null ? null : slugByName.get(category));
+                    Object[] top = primaryCategory(counts.getOrDefault(r.getRestaurantId(), List.of()));
+                    return toResponse(r, top == null ? null : (String) top[0],
+                            top == null ? null : (String) top[1]);
                 })
                 .collect(Collectors.toList());
     }
 
-    /** [kategori, adet] satırlarından en kalabalık kategori; eşitlikte alfabetik ilk. */
-    private static String primaryCategory(List<Object[]> rows, int nameIndex) {
-        return rows.stream()
-                .max(Comparator.<Object[]>comparingLong(s -> (Long) s[nameIndex + 1])
-                        .thenComparing(s -> (String) s[nameIndex], Comparator.reverseOrder()))
-                .map(s -> (String) s[nameIndex])
+    /**
+     * [ad, anahtar, adet] satırlarından restoranın türü: en kalabalık kategori,
+     * eşitlikte alfabetik ilk. Kahve, içecek ve atıştırmalık sayılmaz — her
+     * menüde bulunan eşlikçiler; kebapçının içecek listesi uzun diye haritada
+     * "içecek" görünmesin (22 Ekim). Menü yalnız bunlardan oluşuyorsa (kafe)
+     * sayılırlar.
+     */
+    private static Object[] primaryCategory(List<Object[]> rows) {
+        List<Object[]> main = rows.stream()
+                .filter(s -> !CategorySlug.COMPANIONS.contains((String) s[1]))
+                .toList();
+        return (main.isEmpty() ? rows : main).stream()
+                .max(Comparator.<Object[]>comparingLong(s -> (Long) s[2])
+                        .thenComparing(s -> (String) s[0], Comparator.reverseOrder()))
                 .orElse(null);
     }
 

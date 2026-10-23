@@ -5,6 +5,7 @@ import com.foodboxd.api.dtos.responses.MenuItemResponse;
 import com.foodboxd.api.entities.MenuItem;
 import com.foodboxd.api.exceptions.ResourceNotFoundException;
 import com.foodboxd.api.repositories.MenuItemRepository;
+import com.foodboxd.api.utils.CategorySlug;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -65,11 +66,15 @@ public class FeedService {
             new Section("most-wanted", List.of(), ZERO_RATING, BY_RATING, TOP_RATED_STRIP_SIZE),
             // Kategoriler anahtarla (2.10b): ad değişse de bölümler bozulmaz.
             // Eski listedeki "Salata" hiç var olmayan bir kategoriydi, çıkarıldı.
+            // 22 Ekim'de 30 kategoriye göre yeniden dağıtıldı.
             new Section("cheat-meal",
-                    List.of("burger", "pizza", "tatli", "turk-mutfagi", "italyan", "noodle", "sandvic"),
+                    List.of("burger", "pizza", "doner", "pide-lahmacun", "makarna", "sokak-lezzeti",
+                            "atistirmalik", "sandvic", "meksika", "tatli"),
                     ZERO_RATING, BY_RATING, 0),
-            new Section("healthy", List.of("vegan", "kahvalti", "meze"), ZERO_RATING, BY_RATING, 0),
-            new Section("hidden-gems", List.of("meze", "noodle", "vegan", "tavuk", "ev-yemegi"),
+            new Section("healthy", List.of("vegan", "salata", "balik", "corba", "meze"),
+                    ZERO_RATING, BY_RATING, 0),
+            new Section("hidden-gems",
+                    List.of("meze", "asya", "vegan", "tavuk", "ev-yemegi", "manti", "kofte", "ortadogu", "firin"),
                     ZERO_RATING, BY_RATING, 0));
 
     /** İlçede bu sayıdan az sonuç varsa il geneline düşülür. */
@@ -143,11 +148,16 @@ public class FeedService {
         } else {
             return new PageImpl<>(List.of());
         }
+        // Çip seçili değilken içecekler genel bölümlere girmez (22 Ekim): Keşfet
+        // yemek için; kahve ve içecekler yalnız kendi çipleriyle ve aramada.
+        List<String> excluded = categoryKey.isEmpty() ? CategorySlug.DRINKS : List.of();
         return menuItemRepository.findForFeed(
                 cityKey, districtKey,
                 // JPQL boş koleksiyon kabul etmiyor; catCount=0 ile devre dışı
                 categories.isEmpty() ? List.of("") : categories,
                 categories.size(),
+                excluded.isEmpty() ? List.of("") : excluded,
+                excluded.size(),
                 b.minRating(),
                 new OffsetRange(offset, pageSize, b.sort()));
     }
@@ -155,8 +165,10 @@ public class FeedService {
     private boolean hasEnoughInDistrict(String cityKey, String districtKey, String categoryKey) {
         if (districtKey.isEmpty()) return false;
         List<String> categories = categoryKey.isEmpty() ? List.of("") : List.of(categoryKey);
+        List<String> excluded = categoryKey.isEmpty() ? CategorySlug.DRINKS : List.of("");
         long count = menuItemRepository.findForFeed(
-                cityKey, districtKey, categories, categoryKey.isEmpty() ? 0 : 1, ZERO_RATING,
+                cityKey, districtKey, categories, categoryKey.isEmpty() ? 0 : 1,
+                excluded, categoryKey.isEmpty() ? excluded.size() : 0, ZERO_RATING,
                 PageRequest.of(0, 1)).getTotalElements();
         return count >= DISTRICT_THRESHOLD;
     }

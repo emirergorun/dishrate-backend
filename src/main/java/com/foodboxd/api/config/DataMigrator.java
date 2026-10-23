@@ -16,7 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -46,20 +45,11 @@ public class DataMigrator implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
-        migrateKebabCategory();
-        // Başlangıç kategorilerinin hepsi: üretimde örnek veri kapalı olduğu
-        // için başka yerden gelmiyorlar, içe aktarma (2.11b) bunlara dayanıyor.
-        for (String name : CategorySlug.DEFAULT_ORDER) {
-            if (!categoryRepository.existsByName(name)
-                    && !categoryRepository.existsBySlug(CategorySlug.of(name))) {
-                categoryRepository.save(Category.create(name, CategorySlug.defaultOrder(name)));
-                log.info("Veri göçü: '{}' kategorisi eklendi.", name);
-            }
-        }
+        backfillCategoryKeys();
+        expandCategories();
         replaceBrokenPhotos();
         backfillRatingCounts();
         backfillMemberCodes();
-        backfillCategoryKeys();
         markSeedAccountsVerified();
     }
 
@@ -142,27 +132,121 @@ public class DataMigrator implements CommandLineRunner {
     }
 
     /**
-     * "Kebap" kategorisi "Türk Mutfağı" oldu: lahmacun, pide ve tantuni de
-     * kebap sayılıyordu.
+     * Kategorilerin genişlemesi (22 Ekim, 13 → 30; liste
+     * {@link CategorySlug#DEFAULT_ORDER}). Tekrar çalıştırılabilir:
+     * <ol>
+     *   <li>"Noodle" → "Asya" (anahtar da {@code asya}; yayın öncesi, eski
+     *       yapıların "noodle"u {@code MenuItemService.resolveCategorySlug}'da
+     *       çevrilir),</li>
+     *   <li>listedeki bütün kategoriler var edilir — üretimde örnek veri kapalı,
+     *       içe aktarma (2.11b) bunlara dayanıyor,</li>
+     *   <li>"Türk Mutfağı"ndaki yemekler adlarına göre yeni kategorilere
+     *       dağıtılır, kategori silinir,</li>
+     *   <li>çip sırası listeye göre yeniden yazılır; listede olmayanlar sona.</li>
+     * </ol>
+     * Eski {@code migrateKebabCategory} ("Kebap" → "Türk Mutfağı") kaldırıldı:
+     * yeni Kebap kategorisini her açılışta geri çevirirdi.
      */
-    private void migrateKebabCategory() {
-        Optional<Category> kebab = categoryRepository.findByName("Kebap");
-        if (kebab.isEmpty()) return;
+    private void expandCategories() {
+        mergePideLahmacun();
+        categoryRepository.findBySlug("noodle").ifPresent(noodle -> {
+            if (categoryRepository.findBySlug("asya").isEmpty()) {
+                noodle.setName("Asya");
+                noodle.setSlug("asya");
+                categoryRepository.save(noodle);
+                log.info("Veri göçü: 'Noodle' kategorisi 'Asya' oldu.");
+            }
+        });
 
-        Optional<Category> turkish = categoryRepository.findByName("Türk Mutfağı");
-        if (turkish.isEmpty()) {
-            kebab.get().setName("Türk Mutfağı");
-            categoryRepository.save(kebab.get());
-            log.info("Veri göçü: 'Kebap' kategorisi 'Türk Mutfağı' olarak yeniden adlandırıldı.");
-            return;
+        for (String name : CategorySlug.DEFAULT_ORDER) {
+            if (!categoryRepository.existsByName(name)
+                    && !categoryRepository.existsBySlug(CategorySlug.of(name))) {
+                categoryRepository.save(Category.create(name, CategorySlug.defaultOrder(name)));
+                log.info("Veri göçü: '{}' kategorisi eklendi.", name);
+            }
         }
-        int moved = entityManager.createNativeQuery(
-                        "UPDATE menu_items SET category_id = :newValue WHERE category_id = :oldValue")
-                .setParameter("newValue", turkish.get().getCategoryId())
-                .setParameter("oldValue", kebab.get().getCategoryId())
-                .executeUpdate();
-        categoryRepository.delete(kebab.get());
-        log.info("Veri göçü: {} yemek 'Kebap'tan 'Türk Mutfağı'na taşındı.", moved);
+
+        categoryRepository.findBySlug("turk-mutfagi").ifPresent(turkish -> {
+            @SuppressWarnings("unchecked")
+            List<Object[]> rows = entityManager.createNativeQuery(
+                            "SELECT menu_item_id, name FROM menu_items WHERE category_id = :id")
+                    .setParameter("id", turkish.getCategoryId())
+                    .getResultList();
+            Map<String, Long> ids = new java.util.HashMap<>();
+            for (Category c : categoryRepository.findAll()) {
+                if (c.getSlug() != null) ids.put(c.getSlug(), c.getCategoryId());
+            }
+            for (Object[] row : rows) {
+                String target = turkishDishTarget((String) row[1]);
+                entityManager.createNativeQuery(
+                                "UPDATE menu_items SET category_id = :c WHERE menu_item_id = :m")
+                        .setParameter("c", ids.get(target))
+                        .setParameter("m", ((Number) row[0]).longValue())
+                        .executeUpdate();
+            }
+            categoryRepository.delete(turkish);
+            log.info("Veri göçü: 'Türk Mutfağı' bölündü, {} yemek yeni kategorilerine taşındı.", rows.size());
+        });
+
+        List<String> order = CategorySlug.DEFAULT_ORDER.stream().map(CategorySlug::of).toList();
+        List<Category> all = new java.util.ArrayList<>(categoryRepository.findAll());
+        all.sort(java.util.Comparator.comparing(
+                (Category c) -> c.getSortOrder() == null ? Integer.MAX_VALUE : c.getSortOrder()));
+        int next = order.size();
+        int changed = 0;
+        for (Category c : all) {
+            int i = c.getSlug() == null ? -1 : order.indexOf(c.getSlug());
+            int want = i >= 0 ? i + 1 : ++next;
+            if (c.getSortOrder() == null || c.getSortOrder() != want) {
+                c.setSortOrder(want);
+                categoryRepository.save(c);
+                changed++;
+            }
+        }
+        if (changed > 0) {
+            log.info("Veri göçü: {} kategorinin çip sırası güncellendi.", changed);
+        }
+    }
+
+    /**
+     * Pide ve Lahmacun tek kategori oldu (23 Ekim): "Pide & Lahmacun",
+     * anahtar {@code pide-lahmacun} (boş veritabanında da {@code CategorySlug.of}
+     * aynısını üretiyor). Pide yeniden adlandırılır, Lahmacun'un yemekleri ona
+     * taşınıp kategori silinir.
+     */
+    private void mergePideLahmacun() {
+        categoryRepository.findBySlug("pide").ifPresent(pide -> {
+            if (categoryRepository.findBySlug("pide-lahmacun").isEmpty()) {
+                pide.setName("Pide & Lahmacun");
+                pide.setSlug("pide-lahmacun");
+                categoryRepository.save(pide);
+                log.info("Veri göçü: 'Pide' kategorisi 'Pide & Lahmacun' oldu.");
+            }
+        });
+        categoryRepository.findBySlug("lahmacun").ifPresent(lahmacun -> {
+            Category merged = categoryRepository.findBySlug("pide-lahmacun").orElseGet(() ->
+                    categoryRepository.save(Category.create("Pide & Lahmacun",
+                            CategorySlug.defaultOrder("Pide & Lahmacun"))));
+            int moved = entityManager.createNativeQuery(
+                            "UPDATE menu_items SET category_id = :to WHERE category_id = :from")
+                    .setParameter("to", merged.getCategoryId())
+                    .setParameter("from", lahmacun.getCategoryId())
+                    .executeUpdate();
+            categoryRepository.delete(lahmacun);
+            log.info("Veri göçü: 'Lahmacun' 'Pide & Lahmacun'a katıldı, {} yemek taşındı.", moved);
+        });
+    }
+
+    /** "Türk Mutfağı"ndaki bir yemeğin yeni kategorisi (anahtar), adına göre. */
+    static String turkishDishTarget(String dishName) {
+        String n = com.foodboxd.api.utils.SearchText.normalize(dishName);
+        if (n.contains("tantuni") || n.contains("cig kofte") || n.contains("kokorec")
+                || n.contains("midye")) return "sokak-lezzeti";
+        if (n.contains("doner") || n.contains("iskender")) return "doner";
+        if (n.contains("lahmacun") || n.contains("pide")) return "pide-lahmacun";
+        if (n.contains("kofte")) return "kofte";
+        if (n.contains("corba")) return "corba";
+        return "kebap";
     }
 
     private void replaceBrokenPhotos() {

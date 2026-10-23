@@ -379,6 +379,13 @@ public class CatalogImportService {
             if (c.getSlug() != null) index.put(c.getSlug(), c);
             index.put(SearchText.normalize(c.getName()), c);
         }
+        // Birleşen ya da yeniden adlanan kategorilerin eski adları (22–23 Ekim).
+        Map<String, String> aliases = Map.of("pide", "pide-lahmacun", "lahmacun", "pide-lahmacun",
+                "noodle", "asya");
+        aliases.forEach((alias, slug) -> {
+            Category target = index.get(slug);
+            if (target != null) index.putIfAbsent(alias, target);
+        });
         return index;
     }
 

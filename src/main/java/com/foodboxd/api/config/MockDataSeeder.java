@@ -246,7 +246,9 @@ public class MockDataSeeder implements CommandLineRunner {
 
     private Map<String, Category> prepareCategories() {
         Map<String, Category> map = new LinkedHashMap<>();
-        for (String name : CATEGORIES) {
+        // Bütün kategoriler (yan kategoriler de; sync() her yemeği kendi
+        // kategorisine taşıyabilsin).
+        for (String name : CategorySlug.DEFAULT_ORDER) {
             map.put(name, categoryRepository.findByName(name)
                     .orElseGet(() -> categoryRepository.save(
                             Category.create(name, CategorySlug.defaultOrder(name)))));
@@ -469,11 +471,16 @@ public class MockDataSeeder implements CommandLineRunner {
             new District("Beylikdüzü", 41.0010, 28.6410), new District("Esenyurt", 41.0340, 28.6800),
     };
 
+    /**
+     * Sahte restoranların ana türleri (menünün çoğu bundan). 22 Ekim'de 30
+     * kategoriye göre yenilendi; menüsü küçük kategoriler (Pide, Döner…) yalnız
+     * yemek olarak geçer. Kahve: içeceklerin Keşfet dışı kuralını denemek için.
+     */
     private static final String[] CATEGORIES = {
-            "Burger", "Pizza", "Türk Mutfağı", "Ev Yemeği", "Sushi", "Tatlı", "Kahvaltı",
-            "İtalyan", "Vegan", "Meze", "Noodle", "Tavuk", "Sandviç"};
+            "Burger", "Pizza", "Kebap", "Ev Yemeği", "Sushi", "Tatlı", "Kahvaltı",
+            "Meze", "Asya", "Tavuk", "Sandviç", "Kahve"};
 
-    private static final String[] SIDE_CATEGORIES = {"Tatlı", "Vegan", "Sandviç"};
+    private static final String[] SIDE_CATEGORIES = {"Tatlı", "Atıştırmalık", "İçecek", "Salata"};
 
     private static final String[] PREFIXES = {
             "Mavi", "Köşe", "Sokak", "Liman", "Bereket", "Keyif", "Nar", "Zeytin",
@@ -482,57 +489,67 @@ public class MockDataSeeder implements CommandLineRunner {
     private static final Map<String, String[]> CUISINE_NAMES = Map.ofEntries(
             Map.entry("Burger", new String[]{"Burger Evi", "Burger House", "Smash Co.", "Grill Bar"}),
             Map.entry("Pizza", new String[]{"Pizzeria", "Forno", "Pizza Evi"}),
-            Map.entry("Türk Mutfağı", new String[]{"Ocakbaşı", "Kebap Salonu", "Döner Evi", "Kebapçı", "Pide Salonu"}),
+            Map.entry("Kebap", new String[]{"Ocakbaşı", "Kebap Salonu", "Kebapçı"}),
             Map.entry("Ev Yemeği", new String[]{"Lokantası", "Ev Yemekleri", "Esnaf Lokantası", "Sofrası"}),
             Map.entry("Sushi", new String[]{"Sushi Bar", "Sushi Han", "Omakase"}),
             Map.entry("Tatlı", new String[]{"Tatlıcı", "Pastane", "Baklavacı"}),
             Map.entry("Kahvaltı", new String[]{"Kahvaltı Evi", "Brunch Kulübü", "Kahvaltıcı"}),
-            Map.entry("İtalyan", new String[]{"Trattoria", "Cucina", "Pasta Evi"}),
-            Map.entry("Vegan", new String[]{"Vegan Mutfak", "Green Kitchen", "Bitki Mutfağı"}),
             Map.entry("Meze", new String[]{"Meyhane", "Meze Evi", "Balıkçı"}),
-            Map.entry("Noodle", new String[]{"Noodle Bar", "Wok Evi", "Ramen Evi"}),
+            Map.entry("Asya", new String[]{"Noodle Bar", "Wok Evi", "Ramen Evi"}),
             Map.entry("Tavuk", new String[]{"Tavukçu", "Chicken House", "Izgara Evi"}),
-            Map.entry("Sandviç", new String[]{"Sandviç Dükkanı", "Tost Evi", "Büfe"}));
+            Map.entry("Sandviç", new String[]{"Sandviç Dükkanı", "Tost Evi", "Büfe"}),
+            Map.entry("Kahve", new String[]{"Kahve Dükkanı", "Kahve Evi", "Coffee Co."}));
 
     /**
      * Kategori → yemekler. Her yemek yalnızca bir kategoride durur; mevcut
      * verinin kategorisi de bu tabloya göre düzeltilir ({@link #sync()}).
      * Fotoğraflar yemek adıyla eşleşir: yeni yemek eklersen
-     * {@code mock/dish-photos.json}'a da ekle.
+     * {@code mock/dish-photos.json}'a da ekle (yoksa kategori ikonlu pul).
      */
     private static final Map<String, String[]> DISHES = Map.ofEntries(
             Map.entry("Burger", new String[]{"Smash Burger", "Cheeseburger", "Double Cheddar",
-                    "Tavuklu Burger", "Mantarlı Burger", "Acılı Burger", "Patates Kızartması",
-                    "Soğan Halkası", "Trüflü Patates"}),
+                    "Tavuklu Burger", "Mantarlı Burger", "Acılı Burger"}),
             Map.entry("Pizza", new String[]{"Margherita", "Pepperoni", "Dört Peynirli",
                     "Sucuklu Pizza", "Mantarlı Pizza", "Karışık Pizza", "Calzone", "Beyaz Pizza"}),
-            Map.entry("Türk Mutfağı", new String[]{"Adana Kebap", "Urfa Kebap", "Kuzu Şiş",
-                    "Beyti", "İskender", "Dürüm Döner", "Ekmek Arası Döner", "Tantuni",
-                    "Patlıcan Kebabı", "Lahmacun", "Kıymalı Pide", "Kuşbaşılı Pide", "Çiğ Köfte",
-                    "Ali Nazik", "Hünkar Beğendi"}),
-            Map.entry("Ev Yemeği", new String[]{"Kuru Fasulye", "Pilav", "Mantı", "Karnıyarık",
-                    "Etli Nohut", "Yaprak Sarma", "Taze Fasulye", "Mercimek Çorbası",
-                    "Ezogelin Çorbası", "Biber Dolması", "Musakka", "Türlü", "Tas Kebabı",
-                    "İzmir Köfte"}),
-            Map.entry("Sushi", new String[]{"Somon Nigiri", "Ton Balığı Nigiri", "California Roll",
-                    "Dragon Roll", "Sashimi Tabağı", "Omakase Seti", "Gyoza", "Miso Çorbası"}),
-            Map.entry("Tatlı", new String[]{"Künefe", "Fıstıklı Baklava", "Sütlaç", "Tiramisu",
-                    "Cheesecake", "Çikolatalı Sufle", "Profiterol", "Dondurma", "Magnolia",
-                    "Milkshake"}),
-            Map.entry("Kahvaltı", new String[]{"Serpme Kahvaltı", "Menemen", "Sahanda Yumurta",
-                    "Karışık Gözleme", "Simit Tabağı", "Avokadolu Tost", "Pancake", "Omlet"}),
-            Map.entry("İtalyan", new String[]{"Carbonara", "Bolonez", "Pesto Makarna", "Risotto",
-                    "Lazanya", "Bruschetta", "Caprese Salata"}),
-            Map.entry("Vegan", new String[]{"Falafel Tabağı", "Buddha Bowl", "Mercimek Köftesi",
-                    "Humus", "Vegan Burger", "Kinoa Salatası", "Sebze Wrap"}),
-            Map.entry("Meze", new String[]{"Haydari", "Atom", "Fava", "Şakşuka", "Midye Dolma",
-                    "Cacık", "Enginar", "Patlıcan Salatası"}),
-            Map.entry("Noodle", new String[]{"Ramen", "Pad Thai", "Yakisoba", "Udon",
-                    "Acılı Miso Ramen", "Wok Noodle"}),
+            Map.entry("Kebap", new String[]{"Adana Kebap", "Urfa Kebap", "Kuzu Şiş", "Beyti",
+                    "Patlıcan Kebabı", "Ali Nazik"}),
+            Map.entry("Döner", new String[]{"Ekmek Arası Döner", "Dürüm Döner", "İskender"}),
+            Map.entry("Köfte", new String[]{"Izgara Köfte"}),
+            Map.entry("Pide & Lahmacun", new String[]{"Kıymalı Pide", "Kuşbaşılı Pide", "Lahmacun"}),
+            Map.entry("Mantı", new String[]{"Mantı", "Karışık Gözleme"}),
+            Map.entry("Makarna", new String[]{"Carbonara", "Bolonez", "Pesto Makarna", "Lazanya"}),
+            Map.entry("Ev Yemeği", new String[]{"Kuru Fasulye", "Pilav", "Karnıyarık", "Etli Nohut",
+                    "Yaprak Sarma", "Taze Fasulye", "Biber Dolması", "Musakka", "Türlü", "Tas Kebabı",
+                    "İzmir Köfte", "Hünkar Beğendi"}),
+            Map.entry("Çorba", new String[]{"Mercimek Çorbası", "Ezogelin Çorbası"}),
+            Map.entry("Balık", new String[]{"Levrek Izgara"}),
+            Map.entry("Et", new String[]{"Antrikot"}),
             Map.entry("Tavuk", new String[]{"Izgara Tavuk", "Tavuk Kanat", "Crispy Tavuk",
                     "Tavuklu Pilav", "Tavuk Şiş", "Buffalo Kanat"}),
+            Map.entry("Sokak Lezzeti", new String[]{"Tantuni", "Çiğ Köfte", "Midye Dolma"}),
             Map.entry("Sandviç", new String[]{"Kumru", "Ayvalık Tostu", "Club Sandviç",
-                    "Tavuklu Wrap", "Falafel Dürüm", "Kaşarlı Tost"}));
+                    "Tavuklu Wrap", "Falafel Dürüm", "Kaşarlı Tost"}),
+            Map.entry("Atıştırmalık", new String[]{"Patates Kızartması", "Soğan Halkası",
+                    "Trüflü Patates"}),
+            Map.entry("Kahvaltı", new String[]{"Serpme Kahvaltı", "Menemen", "Sahanda Yumurta",
+                    "Simit Tabağı", "Avokadolu Tost", "Pancake", "Omlet"}),
+            Map.entry("Meze", new String[]{"Haydari", "Atom", "Fava", "Şakşuka", "Cacık",
+                    "Enginar", "Patlıcan Salatası"}),
+            Map.entry("Salata", new String[]{"Caprese Salata", "Kinoa Salatası"}),
+            Map.entry("Vegan", new String[]{"Buddha Bowl", "Mercimek Köftesi", "Vegan Burger",
+                    "Sebze Wrap"}),
+            Map.entry("İtalyan", new String[]{"Risotto", "Bruschetta"}),
+            Map.entry("Sushi", new String[]{"Somon Nigiri", "Ton Balığı Nigiri", "California Roll",
+                    "Dragon Roll", "Sashimi Tabağı", "Omakase Seti", "Miso Çorbası"}),
+            Map.entry("Asya", new String[]{"Ramen", "Pad Thai", "Yakisoba", "Udon",
+                    "Acılı Miso Ramen", "Wok Noodle", "Gyoza"}),
+            Map.entry("Ortadoğu", new String[]{"Falafel Tabağı", "Humus"}),
+            Map.entry("Meksika", new String[]{"Taco"}),
+            Map.entry("Fırın", new String[]{"Peynirli Börek"}),
+            Map.entry("Tatlı", new String[]{"Künefe", "Fıstıklı Baklava", "Sütlaç", "Tiramisu",
+                    "Cheesecake", "Çikolatalı Sufle", "Profiterol", "Dondurma", "Magnolia"}),
+            Map.entry("Kahve", new String[]{"Latte", "Türk Kahvesi", "Filtre Kahve", "Flat White"}),
+            Map.entry("İçecek", new String[]{"Milkshake", "Ayran", "Limonata"}));
 
     /** Yemek adı → kategori (YEMEKLER'in tersi). */
     private static final Map<String, String> DISH_CATEGORY = new HashMap<>();

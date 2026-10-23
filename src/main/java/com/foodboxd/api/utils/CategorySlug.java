@@ -16,10 +16,29 @@ public final class CategorySlug {
     /**
      * Başlangıç kategorileri, çip sırasıyla. Tohumlayıcılar ve veri göçü sırayı
      * buradan alır; listede olmayan (sonradan eklenen) kategori sona yazılır.
+     *
+     * <p>22 Ekim'de 13'ten 30'a çıktı (Emir): kategori "canının çektiği yemek
+     * türü", her yemeğin tek kategorisi var. "Türk Mutfağı" bölündü (Kebap,
+     * Döner, Köfte, Pide & Lahmacun, Mantı…), "Noodle" Asya oldu; Pide ve
+     * Lahmacun 23 Ekim'de birleşti (aynı dükkan, aynı fırın; anahtar
+     * {@code pide-lahmacun}). İtalyan
+     * makarna ve pizza dışını kapsar (makarnalar Makarna'da). Kahve ve İçecek
+     * Keşfet'in genel bölümlerine girmez ({@code FeedService}).
      */
     public static final List<String> DEFAULT_ORDER = List.of(
-            "Burger", "Pizza", "Türk Mutfağı", "Ev Yemeği", "Sushi", "Tatlı", "Kahvaltı",
-            "İtalyan", "Vegan", "Meze", "Noodle", "Tavuk", "Sandviç");
+            "Burger", "Pizza", "Kebap", "Döner", "Köfte", "Pide & Lahmacun", "Mantı",
+            "Makarna", "Ev Yemeği", "Çorba", "Balık", "Et", "Tavuk", "Sokak Lezzeti",
+            "Sandviç", "Atıştırmalık", "Kahvaltı", "Meze", "Salata", "Vegan", "İtalyan",
+            "Sushi", "Asya", "Ortadoğu", "Meksika", "Fırın", "Tatlı", "Kahve", "İçecek");
+
+    /** İçecek kategorileri: Keşfet'in genel bölümlerinde görünmez, yalnız çipleriyle. */
+    public static final List<String> DRINKS = List.of("kahve", "icecek");
+
+    /**
+     * Restoranın türü (harita ikonu) hesaplanırken sayılmayanlar: her menüde
+     * bulunan eşlikçiler. Yalnız bunlardan oluşan menüde sayılır.
+     */
+    public static final List<String> COMPANIONS = List.of("kahve", "icecek", "atistirmalik");
 
     /** {@link #DEFAULT_ORDER}'daki sırası (1'den), yoksa null. */
     public static Integer defaultOrder(String name) {

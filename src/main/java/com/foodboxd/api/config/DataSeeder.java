@@ -87,18 +87,18 @@ public class DataSeeder implements CommandLineRunner {
         r = restaurant("Bun Lab", "İstanbul", "Kadıköy", "Moda Cad. No:5, Kadıköy", 40.9907, 29.0262);
         item(r, "Burger", "Double Smash", 4.9, BURGER2);
         item(r, "Burger", "Crispy Chicken Burger", 4.7, BURGER1);
-        item(r, "Burger", "Loaded Fries", 4.6, FRIES);
+        item(r, "Atıştırmalık", "Loaded Fries", 4.6, FRIES);
         item(r, "Tatlı", "Oreo Shake", 4.5, DESSERT);
 
         r = restaurant("Smoke & Grill", "İstanbul", "Şişli", "Halaskargazi Cad. No:21, Şişli", 41.0602, 28.9877);
         item(r, "Burger", "Triple Smash", 4.9, BURGER3);
         item(r, "Burger", "BBQ Bacon Burger", 4.8, BURGER1);
         item(r, "Burger", "Smoke Ribs", 4.7, BURGER4);
-        item(r, "Burger", "Peynirli Patates", 4.6, FRIES);
+        item(r, "Atıştırmalık", "Peynirli Patates", 4.6, FRIES);
 
         r = restaurant("The Fat Cow", "İstanbul", "Bebek", "Bebek Cad. No:14, Bebek", 41.0774, 29.0396);
         item(r, "Burger", "Wagyu Burger", 4.8, BURGER4);
-        item(r, "Burger", "Truffle Fries", 4.9, FRIES);
+        item(r, "Atıştırmalık", "Truffle Fries", 4.9, FRIES);
         item(r, "Vegan", "Burrata Salatası", 4.7, VEGAN1);
         item(r, "Tatlı", "Çikolata Fondanı", 4.6, DESSERT);
 
@@ -106,7 +106,7 @@ public class DataSeeder implements CommandLineRunner {
         item(r, "Burger", "Smash Burger", 4.7, BURGER1);
         item(r, "Burger", "Jalapeno Burger", 4.6, BURGER2);
         item(r, "Burger", "Mushroom Swiss Burger", 4.5, BURGER3);
-        item(r, "Burger", "Sweet Potato Fries", 4.4, FRIES);
+        item(r, "Atıştırmalık", "Sweet Potato Fries", 4.4, FRIES);
 
         // ── Pizza ──
         r = restaurant("Forno di Napoli", "İstanbul", "Galata", "Galata Kulesi Sok. No:3, Beyoğlu", 41.0256, 28.9744);
@@ -126,7 +126,7 @@ public class DataSeeder implements CommandLineRunner {
         item(r, "Sushi", "Omakase Set (10 pcs)", 5.0, SUSHI2);
         item(r, "Sushi", "Salmon Nigiri (8 adet)", 4.8, SUSHI1);
         item(r, "Sushi", "Dragon Roll", 4.9, SUSHI1);
-        item(r, "Noodle", "Miso Çorbası", 4.5, VEGAN2);
+        item(r, "Sushi", "Miso Çorbası", 4.5, VEGAN2);
 
         r = restaurant("Nobu Istanbul", "İstanbul", "Etiler", "Nispetiye Cad. No:76, Etiler", 41.0794, 29.0235);
         item(r, "Sushi", "Tuna Tataki", 4.6, SUSHI1);
@@ -134,23 +134,23 @@ public class DataSeeder implements CommandLineRunner {
         item(r, "Sushi", "Yellowtail Jalapeño", 4.8, SUSHI1);
         item(r, "Sushi", "Wagyu Gyoza", 4.7, SUSHI2);
 
-        // ── Türk Mutfağı ──
+        // ── Kebap, döner, tantuni (22 Ekim'e kadar Türk Mutfağı) ──
         r = restaurant("Ocakbaşı 1969", "İstanbul", "Karaköy", "Kemankeş Cad. No:11, Karaköy", 41.0231, 28.9766);
-        item(r, "Türk Mutfağı", "Adana Kebap", 4.8, KEBAB1);
-        item(r, "Türk Mutfağı", "Urfa Kebap", 4.7, KEBAB1);
-        item(r, "Türk Mutfağı", "Kuzu Şiş", 4.9, KEBAB1);
-        item(r, "Türk Mutfağı", "Patlıcan Kebabı", 4.6, KEBAB1);
+        item(r, "Kebap", "Adana Kebap", 4.8, KEBAB1);
+        item(r, "Kebap", "Urfa Kebap", 4.7, KEBAB1);
+        item(r, "Kebap", "Kuzu Şiş", 4.9, KEBAB1);
+        item(r, "Kebap", "Patlıcan Kebabı", 4.6, KEBAB1);
 
         r = restaurant("Karadeniz Döner", "İstanbul", "Beşiktaş", "Barbaros Blv. No:3, Beşiktaş", 41.0430, 29.0030);
-        item(r, "Türk Mutfağı", "Dürüm Döner", 4.5, KEBAB2);
-        item(r, "Türk Mutfağı", "Ekmek Arası Döner", 4.4, KEBAB2);
-        item(r, "Türk Mutfağı", "Yarım Porsiyon", 4.3, KEBAB2);
+        item(r, "Döner", "Dürüm Döner", 4.5, KEBAB2);
+        item(r, "Döner", "Ekmek Arası Döner", 4.4, KEBAB2);
+        item(r, "Döner", "Yarım Porsiyon", 4.3, KEBAB2);
         item(r, "Tavuk", "Tavuk Dürüm", 4.4, CHICKEN);
 
         r = restaurant("Mersin Tantunisi", "İstanbul", "Bağcılar", "Fevzi Paşa Cad. No:55, Bağcılar", 41.0353, 28.8560);
-        item(r, "Türk Mutfağı", "Tantuni", 4.9, KEBAB2);
-        item(r, "Türk Mutfağı", "Dürüm Tantuni", 4.8, KEBAB2);
-        item(r, "Türk Mutfağı", "Acılı Tantuni", 4.7, KEBAB1);
+        item(r, "Sokak Lezzeti", "Tantuni", 4.9, KEBAB2);
+        item(r, "Sokak Lezzeti", "Dürüm Tantuni", 4.8, KEBAB2);
+        item(r, "Sokak Lezzeti", "Acılı Tantuni", 4.7, KEBAB1);
         item(r, "Vegan", "Şalgam Suyu", 4.5, VEGAN2);
 
         // ── Tavuk ──
@@ -189,22 +189,22 @@ public class DataSeeder implements CommandLineRunner {
         r = restaurant("Şanlıurfa Sofrası", "İstanbul", "Fatih", "Ordu Cad. No:12, Fatih", 41.0188, 28.9410);
         item(r, "Tatlı", "Künefe", 4.9, DESSERT);
         item(r, "Tatlı", "Sütlü Künefe", 4.8, DESSERT);
-        item(r, "Türk Mutfağı", "Adana Kebap", 4.7, KEBAB1);
+        item(r, "Kebap", "Adana Kebap", 4.7, KEBAB1);
         item(r, "Vegan", "Ayran", 4.5, VEGAN2);
 
         // ── İtalyan ──
         r = restaurant("La Cucina", "İstanbul", "Cihangir", "Cihangir Cad. No:29, Beyoğlu", 41.0330, 28.9820);
         item(r, "İtalyan", "Truffle Risotto", 4.8, ITALIAN2);
-        item(r, "İtalyan", "Truffle Carbonara", 4.8, ITALIAN1);
+        item(r, "Makarna", "Truffle Carbonara", 4.8, ITALIAN1);
         item(r, "İtalyan", "Burrata & Pomodoro", 4.7, VEGAN1);
         item(r, "Tatlı", "Tiramisu della Casa", 4.9, DESSERT);
 
-        // ── Noodle ──
+        // ── Asya ──
         r = restaurant("Noodle Bar", "İstanbul", "Karaköy", "Tersane Cad. No:6, Karaköy", 41.0215, 28.9758);
-        item(r, "Noodle", "Ramen", 4.8, NOODLE);
-        item(r, "Noodle", "Spicy Miso Ramen", 4.7, NOODLE);
-        item(r, "Noodle", "Pad Thai", 4.6, NOODLE);
-        item(r, "Noodle", "Gyoza (6 adet)", 4.5, SUSHI1);
+        item(r, "Asya", "Ramen", 4.8, NOODLE);
+        item(r, "Asya", "Spicy Miso Ramen", 4.7, NOODLE);
+        item(r, "Asya", "Pad Thai", 4.6, NOODLE);
+        item(r, "Asya", "Gyoza (6 adet)", 4.5, SUSHI1);
 
         // ── Vegan ──
         r = restaurant("Green Bowl", "İstanbul", "Nişantaşı", "Maçka Cad. No:15, Nişantaşı", 41.0490, 28.9988);

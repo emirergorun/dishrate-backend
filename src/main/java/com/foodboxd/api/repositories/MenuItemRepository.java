@@ -50,20 +50,20 @@ public interface MenuItemRepository extends JpaRepository<MenuItem, Long> {
                           @Param("target") String target,
                           @Param("maxResults") int maxResults);
 
-    /** Restoran başına kategori sayıları: [restaurantId, kategori adı, adet]. */
+    /** Restoran başına kategori sayıları: [restaurantId, kategori adı, anahtar, adet]. */
     @Query("""
-            SELECT mi.restaurant.restaurantId, c.name, COUNT(mi)
+            SELECT mi.restaurant.restaurantId, c.name, c.slug, COUNT(mi)
             FROM MenuItem mi JOIN mi.category c
-            GROUP BY mi.restaurant.restaurantId, c.name
+            GROUP BY mi.restaurant.restaurantId, c.name, c.slug
             """)
     List<Object[]> countCategoriesPerRestaurant();
 
-    /** Tek restoranın kategori sayıları: [kategori adı, adet]. */
+    /** Tek restoranın kategori sayıları: [kategori adı, anahtar, adet]. */
     @Query("""
-            SELECT c.name, COUNT(mi)
+            SELECT c.name, c.slug, COUNT(mi)
             FROM MenuItem mi JOIN mi.category c
             WHERE mi.restaurant.restaurantId = :restaurantId
-            GROUP BY c.name
+            GROUP BY c.name, c.slug
             """)
     List<Object[]> countCategoriesOfRestaurant(@Param("restaurantId") Long restaurantId);
 
@@ -80,7 +80,10 @@ public interface MenuItemRepository extends JpaRepository<MenuItem, Long> {
      * <p>Kategoriler anahtarla ({@code slug}) süzülür, ada bakılmaz (2.10b).
      *
      * <p>{@code catCount} parametresi JPQL'in boş koleksiyonla baş edememesi
-     * yüzünden var: 0 ise kategori süzgeci hiç uygulanmaz.
+     * yüzünden var: 0 ise kategori süzgeci hiç uygulanmaz. {@code excluded} /
+     * {@code exCount} aynı mantıkla hariç tutulan kategoriler (çip seçili
+     * değilken içecekler, 22 Ekim). Kategori {@code LEFT JOIN}: kategorisiz
+     * yemek süzgeçsiz bölümlerden düşmesin.
      *
      * <p>İl/ilçe "yok" anlamında {@code null} değil boş metin alır: Hibernate
      * tipsiz {@code null}'u Postgres'e bytea olarak bağlıyor ve
@@ -90,15 +93,19 @@ public interface MenuItemRepository extends JpaRepository<MenuItem, Long> {
             SELECT mi FROM MenuItem mi
               JOIN mi.restaurant r
               JOIN r.address a
+              LEFT JOIN mi.category c
             WHERE (:city = '' OR LOWER(a.city) = LOWER(:city))
               AND (:district = '' OR LOWER(a.district) = LOWER(:district))
-              AND (:catCount = 0 OR mi.category.slug IN :categories)
+              AND (:catCount = 0 OR c.slug IN :categories)
+              AND (:exCount = 0 OR c.slug IS NULL OR c.slug NOT IN :excluded)
               AND mi.averageRating >= :minRating
             """)
     Page<MenuItem> findForFeed(@Param("city") String city,
                                @Param("district") String district,
                                @Param("categories") Collection<String> categories,
                                @Param("catCount") int catCount,
+                               @Param("excluded") Collection<String> excluded,
+                               @Param("exCount") int exCount,
                                @Param("minRating") BigDecimal minRating,
                                Pageable pageable);
 }

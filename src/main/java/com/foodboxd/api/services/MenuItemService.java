@@ -69,6 +69,16 @@ public class MenuItemService {
     public String resolveCategorySlug(String param) {
         if (param == null || param.isBlank()) return "";
         String value = param.trim();
+        // 22 Ekim'de kalkan/yeniden adlanan kategoriler: eski yapılar bunları
+        // gönderebilir (Noodle → Asya, Türk Mutfağı bölündü → en yakını Kebap;
+        // 23 Ekim: Pide ve Lahmacun birleşti).
+        String legacy = switch (com.foodboxd.api.utils.SearchText.normalize(value)) {
+            case "noodle" -> "asya";
+            case "pide", "lahmacun" -> "pide-lahmacun";
+            case "turk-mutfagi", "turk mutfagi" -> "kebap";
+            default -> null;
+        };
+        if (legacy != null) return legacy;
         if (categoryRepository.existsBySlug(value)) return value;
         return categoryRepository.findFirstByNameIgnoreCase(value)
                 .map(Category::getSlug)
